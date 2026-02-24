@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Data and generated artifacts
+/data/
+/runs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.pyc

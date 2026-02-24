@@ -1,0 +1,108 @@
+{
+  "demo_runs": [
+    {
+      "name": "CPR11_temperature_motor",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CPR",
+      "entity": "CPR11",
+      "sensor": "temperature_motor",
+      "output_plot_name": "CPR11_temperature_motor_spc.png"
+    },
+    {
+      "name": "CPR11_vibration_rms",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CPR",
+      "entity": "CPR11",
+      "sensor": "vibration_rms",
+      "output_plot_name": "CPR11_vibration_rms_spc.png"
+    },
+    {
+      "name": "CNC01_vibration_rms",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CNC",
+      "entity": "CNC01",
+      "sensor": "vibration_rms",
+      "output_plot_name": "CNC01_vibration_rms_spc.png"
+    },
+    {
+      "name": "CNC03_rpm",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CNC",
+      "entity": "CNC03",
+      "sensor": "rpm",
+      "output_plot_name": "CNC03_rpm_spc.png"
+    },
+    {
+      "name": "CNC05_temperature_motor",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CNC",
+      "entity": "CNC05",
+      "sensor": "temperature_motor",
+      "output_plot_name": "CNC05_temperature_motor_spc.png"
+    },
+    {
+      "name": "PMP06_pressure_level",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "PMP",
+      "entity": "PMP06",
+      "sensor": "pressure_level",
+      "output_plot_name": "PMP06_pressure_level_spc.png"
+    },
+    {
+      "name": "PMP08_current_phase_avg",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "PMP",
+      "entity": "PMP08",
+      "sensor": "current_phase_avg",
+      "output_plot_name": "PMP08_current_phase_avg_spc.png"
+    },
+    {
+      "name": "PMP10_temperature_motor",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "PMP",
+      "entity": "PMP10",
+      "sensor": "temperature_motor",
+      "output_plot_name": "PMP10_temperature_motor_spc.png"
+    },
+    {
+      "name": "CPR13_pressure_level",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CPR",
+      "entity": "CPR13",
+      "sensor": "pressure_level",
+      "output_plot_name": "CPR13_pressure_level_spc.png"
+    },
+    {
+      "name": "CPR15_rpm",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "CPR",
+      "entity": "CPR15",
+      "sensor": "rpm",
+      "output_plot_name": "CPR15_rpm_spc.png"
+    },
+    {
+      "name": "ARM16_current_phase_avg",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "ARM",
+      "entity": "ARM16",
+      "sensor": "current_phase_avg",
+      "output_plot_name": "ARM16_current_phase_avg_spc.png"
+    },
+    {
+      "name": "ARM18_vibration_rms",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "ARM",
+      "entity": "ARM18",
+      "sensor": "vibration_rms",
+      "output_plot_name": "ARM18_vibration_rms_spc.png"
+    },
+    {
+      "name": "ARM20_temperature_motor",
+      "sql_query": "sql/entity_sensor_all_history.sql",
+      "entity_group": "ARM",
+      "entity": "ARM20",
+      "sensor": "temperature_motor",
+      "output_plot_name": "ARM20_temperature_motor_spc.png"
+    }
+  ]
+}

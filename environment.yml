@@ -1,0 +1,11 @@
+name: agentic_mfg
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pandas
+  - numpy
+  - duckdb
+  - matplotlib
+  - jupyter
+  - pip
