@@ -79,7 +79,7 @@ def plot_fleet_boxplot(df, job: dict, params: dict, output_path):
     entities = sorted(chart_df["entity"].unique())
     data = [chart_df.loc[chart_df["entity"] == e, y_col].values for e in entities]
 
-    plt.figure(figsize=(max(10, 0.6 * len(entities)), 6))
+    plt.figure(figsize=(min(10, 3 * len(entities)), 6))
     ax = plt.gca()
 
     ax.boxplot(

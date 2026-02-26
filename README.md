@@ -130,7 +130,7 @@ The LLM will never:
 
 All analytics are executed by deterministic, version-controlled modules.
 
-Schema reference: [`docs/json_schema_v0_2_0.md`](docs/json_schema_v0_2_0.md).
+Schema reference: [`json_schema_v0_2_0.md`](docs/json_schema_v0_2_0.md).
 
 ---
 
@@ -147,7 +147,7 @@ Schema reference: [`docs/json_schema_v0_2_0.md`](docs/json_schema_v0_2_0.md).
 ### Project Structure
 
 ```
-agentic-predictive-maintenance/
+deterministic-spc-agent/
 │
 ├── data/
 ├── planner/
