@@ -18,9 +18,6 @@ WHERE data.entity_group = ?
     AND entity = ? 
     AND data.sensor = ?
     AND operating_mode = 'normal'
-<<<<<<< Updated upstream
-=======
     AND CAST(timestamp AS TIMESTAMP) >= COALESCE(?, TIMESTAMP '1900-01-01 00:00:00')
     AND CAST(timestamp AS TIMESTAMP) <  COALESCE(?, TIMESTAMP '9999-12-31 23:59:59')
->>>>>>> Stashed changes
 ORDER BY ts;

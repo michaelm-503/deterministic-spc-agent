@@ -1,75 +1,98 @@
 import pandas as pd
-from pathlib import Path
 
-def preprocess(df_long, processed_dir="data/processed"):
+
+def preprocess_ewma_spc(df, job: dict | None = None, params: dict | None = None):
     """
-    Preprocess sensor data for SPC analysis.
+    Preprocess sensor data for SPC visualization.
 
     Steps:
-    1. Filter to operating_mode == 'normal' (verify)
-    2. Compute EWMA rolling average per chart
-       - Reset after maintenance (hours_since_maintenance == 0)
-       - No NaNs retained
-    3. SPC violation flag using EWMA vs. SPC limits
+    1) Filter to operating_mode == 'normal'
+    2) Compute EWMA per (entity, sensor), resetting after maintenance
+       - Reset when hours_since_maintenance == 0
+    3) Compute SPC violation flag from RAW value vs limits (null-safe)
+       pass iff (value <= UCL OR UCL is null) AND (value >= LCL OR LCL is null)
+
+    Notes:
+    - EWMA is a visual aid; it does NOT drive violation calculation.
+    - Limits may be one-sided (UCL-only or LCL-only). Missing sides auto-pass.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Same dataframe with added columns:
+        - ewma
+        - spc_violation (bool)
     """
 
+    job = job or {}
+    params = params or {}
+
+    alpha = float(params.get("ewma_alpha", 0.2))
+    if not (0 < alpha <= 1.0):
+        raise ValueError(f"ewma_alpha must be in (0, 1], got {alpha}")
+
     # -----------------------------
-    # 0. Required Columns
+    # Required columns (minimal)
     # -----------------------------
     required = {
-        'entity', 'entity_group', 'ts', 'operating_mode', 'hours_since_maintenance',
-        'failure_type', 'sensor', 'value', 'ucl', 'centerline', 'lcl'
+        "entity",
+        "entity_group",
+        "ts",
+        "operating_mode",
+        "hours_since_maintenance",
+        "sensor",
+        "value",
     }
-    
-    missing = required - set(df_long.columns)
+    missing = required - set(df.columns)
     if missing:
-        raise KeyError(f"Missing required columns: {sorted(missing)}")
+        raise KeyError(f"Missing required columns for ewma_spc preprocess: {sorted(missing)}")
 
+    # Ensure limit columns exist (values can be null => auto-pass)
+    if "ucl" not in df.columns:
+        df = df.assign(ucl=pd.NA)
+    if "lcl" not in df.columns:
+        df = df.assign(lcl=pd.NA)
+
+    # Optional centerline: nice for plotting, not required
+    if "centerline" not in df.columns:
+        df = df.assign(centerline=pd.NA)
 
     # -----------------------------
-    # 1. Filter to NORMAL operation (verify)
+    # 1) Filter to NORMAL operation
     # -----------------------------
-    
-    df_long = df_long[df_long["operating_mode"] == "normal"].copy()
+    df = df[df["operating_mode"] == "normal"].copy()
+    if df.empty:
+        # No normal-mode data: return empty with required output columns
+        df["ewma"] = pd.Series(dtype="float64")
+        df["spc_violation"] = pd.Series(dtype="bool")
+        return df
 
-    # -----------------------------
-    # 2. EWMA with maintenance reset
-    # -----------------------------
+    # Timestamp type safety
+    df["ts"] = pd.to_datetime(df["ts"])
 
-    EWMA_ALPHA = 0.2
-    
     # Deterministic ordering
-    df_long = df_long.sort_values(['entity', 'sensor', 'ts']).copy()
-    
-    # Define maintenance blocks per chart (reset when hours_since_maintenance == 0)
-    df_long['maintenance_block'] = (
-        df_long.groupby(['entity', 'sensor'])['hours_since_maintenance']
-              .transform(lambda s: (s == 0).cumsum())
-    )
-    
-    # EWMA per (entity_group, sensor, maintenance_block)
-    # transform guarantees alignment and preserves all columns
-    df_long['ewma'] = (
-        df_long.groupby(['entity', 'sensor', 'maintenance_block'])['value']
-              .transform(lambda s: s.ewm(alpha=EWMA_ALPHA, adjust=False).mean())
-    )
-    
-    # Generate SPC violation column
-    
-    df_long['spc_violation'] = (
-        (df_long['ewma'] > df_long['ucl']) |
-        (df_long['ewma'] < df_long['lcl'])
-    )
-    
-    df_long = df_long.drop(columns=['maintenance_block'])
+    df = df.sort_values(["entity", "sensor", "ts"]).copy()
 
     # -----------------------------
-    # 3. SPC violation flag using EWMA
+    # 2) EWMA with maintenance reset
     # -----------------------------
+    df["maintenance_block"] = (
+        df.groupby(["entity", "sensor"])["hours_since_maintenance"]
+          .transform(lambda s: (s == 0).cumsum())
+    )
 
-    # expects columns: value, ucl, lcl
+    df["ewma"] = (
+        df.groupby(["entity", "sensor", "maintenance_block"])["value"]
+          .transform(lambda s: s.ewm(alpha=alpha, adjust=False).mean())
+    )
+
+    df = df.drop(columns=["maintenance_block"])
+
+    # -----------------------------
+    # 3) SPC violation flag from RAW value vs limits (null-safe)
+    # -----------------------------
     ucl_ok = df["ucl"].isna() | (df["value"] <= df["ucl"])
     lcl_ok = df["lcl"].isna() | (df["value"] >= df["lcl"])
     df["spc_violation"] = ~(ucl_ok & lcl_ok)
 
-    return df_long
+    return df
