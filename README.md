@@ -17,17 +17,19 @@ Instead of allowing AI models to generate analysis code or write SQL, this syste
 - Applies deterministic preprocessing logic
 - Generates standardized SPC visualizations
 - Exports fully reproducible run artifacts
+- Supports plot rework without re-running SQL or preprocessing
 - Verifies outputs via schema validation and hashing
 
 This project demonstrates how to integrate LLMs into manufacturing analytics without sacrificing engineering rigor.
 
-Synthetic manufacturing data from the [Industrial Machine Predictive Maintenance Dataset](https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance) was used for this demo.
+Public predictive manufacturing data from the [Industrial Machine Predictive Maintenance Dataset](https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance) was used for this demo.
 
 ---
 
-### Why This Exists
+## Why This Exists
 
 Most AI analytics systems suffer from:
+
 - Non-deterministic outputs
 - Hidden logic
 - Poor reproducibility
@@ -35,54 +37,28 @@ Most AI analytics systems suffer from:
 - Unsafe SQL or code generation
 
 This system enforces:
-- Tool allow-lists
-- Schema validation
+
 - Deterministic mathematical processing
-- Artifact hashing and verification
 - Full run traceability
+- Strict JSON schema validation
+- Tool allow-lists
+- Artifact hashing and verification
 
 The LLM acts strictly as a planner, not an analyst.
 
 ---
 
-### Architecture
-
-```
-User Question
-      ↓
-LLM Planner (JSON only)
-      ↓
-Validated Plan Schema
-      ↓
-SQL Template Execution
-      ↓
-Deterministic Preprocessing
-      ↓
-Standardized Plot Generation
-      ↓
-Verification + Run Artifacts
-```
-
-The LLM will never:
-- Write SQL
-- Execute Python
-- Access raw data
-- Perform statistical calculations
-
-All analytics are executed by deterministic, version-controlled modules.
-
----
-
-### Core Features
+## Core Features
 
 - SQL-backed data extraction (DuckDB)
-- SPC statistics (mean, std, UCL, LCL) and violation detection
+- SPC statistics and violation detection
 - EWMA smoothing with maintenance reset
 - Standardized time-series plots
-- Multi-run batch execution via structured plan library
+- Multi-job batch execution via structured plan library
 - Full reproducibility via run folders
 - Artifact hashing for verification
 - Extensible architecture for additional SQL templates, preprocess logic, and plot types
+- Replot (Rework) mode enables visual plot adjustments without re-running SQL or preprocessing
 
 ---
 
@@ -96,21 +72,75 @@ All analytics are executed by deterministic, version-controlled modules.
 
 ```
 {
-  "runs": [
-    {"entity":"CPR11","sensor":"temperature_motor"},
-    {"entity":"CPR11","sensor":"vibration_rms"}
-  ]
-}
+  "run_id": "demo_cpr11_health_check",
+  "jobs": [
+    {
+      "job_id": "CPR11_temperature_motor",
+      "sql_template": "entity_sensor_history",
+      "preprocess": "ewma_spc",
+      "filters": {
+        "entity_group": "CPR",
+        "entity": "CPR11",
+        "sensor": "temperature_motor"
+      },
+      "outputs": {
+        "plots": [
+          {
+            "plot_name": "CPR11_temperature_motor_spc.png",
+            "plot": "spc_time_series"
+          }
+        ]
+      }
+    }, ...
 ```
 
 **System generates:**
 - Two SPC plots
 - Processed datasets
-- SPC reference tables
 - Reproducibility script
 - Hash verification output
 
 ![Image](assets/CPR11_demo.png)
+
+---
+
+## Architecture
+
+```
+User Question
+      ↓
+LLM Planner (JSON only)
+      ↓
+Validated Plan Schema
+      ↓
+SQL Template Execution
+      ↓
+Deterministic Preprocessing
+      ↓
+Plot/Table Generation
+      ↓
+Verification + Run Artifacts
+```
+
+The LLM will never:
+- Write SQL
+- Execute Python
+- Access raw data
+- Perform statistical calculations
+
+All analytics are executed by deterministic, version-controlled modules.
+
+Schema reference: [`docs/json_schema_v0_2_0.md`](docs/json_schema_v0_2_0.md).
+
+---
+
+### Design Principles
+
+- LLMs plan; deterministic code executes.
+- All execution pathways are registry-controlled.
+- SQL parameter signatures are explicitly declared.
+- No dynamic code generation.
+- All outputs are reproducible from stored artifacts.
 
 ---
 
@@ -120,16 +150,20 @@ All analytics are executed by deterministic, version-controlled modules.
 agentic-predictive-maintenance/
 │
 ├── data/
-├── notebooks/
-├── preprocess/
-├── plots/
 ├── planner/
-├── sql/
-├── verify/
+├── plots/
+├── preprocess/
+├── runner/
 ├── runs/
+├── sql/
+├── tables/
+├── tests/
+├── verify/
 │
-├── environment.yml
 ├── README.md
+├── docs/
+├── notebooks/
+├── environment.yml
 └── LICENSE
 ```
 
@@ -160,7 +194,7 @@ This notebook:
 
 Run:
 ```
-notebooks/04_run_pipeline.ipynb
+notebooks/05_run_pipeline_phase_2.ipynb
 ```
 This notebook:
 - Loads structured demo plans
@@ -193,32 +227,32 @@ All results are:
 
 ---
 
-### Roadmap
+## Roadmap
 
-Phase 1 - Proof of Concept Workflow ✅
+#### Phase 1 - Proof of Concept Workflow ✅
 - Structured data model
 - Deterministic preprocessing
 - Guardrailed execution
-- Multi-run batch execution
 
-Phase 2 – Expand workflows
-- Full tool health check
-- Fleet health check
-- Violation metrics dashboard
-- Boxplots and Heatmaps
+#### Phase 2 – Expand workflows ✅
+- Single-tool and fleet-level analytics workflows
+- Plot-level parameter overrides
+- Replot (visual-only rework) mode
+- SQL template registry with parameter signatures
+- JSON schema validation framework
 
-Phase 3 – Production Hardening
+#### Phase 3 – Production Hardening
 - CLI runner
-- Environment validation
-- CI testing
-- Artifact validation automation
+- CI integration
+- Automated artifact validation
+- Environment pinning
 
-Phase 4 – Agentic Front-End
-- Plan schema enforcement
-- Tool allow-lists
+#### Phase 4 – Agentic Front-End
 - LLM planner integration
-- Guardrail validation
-- Prompt + structured output
+- Guardrail enforcement
+- Prompt interpretation layer
+- Secure execution interface
+- Tool allow-lists
 
 ---
 

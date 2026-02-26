@@ -1,0 +1,820 @@
+{
+  "runs": [
+    {
+      "run_id": "test_spc_time_series_axis_limits",
+      "request_text": "TEST: spc_time_series. Set x_min/x_max, y_min/y_max",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "x_min": "2024-01-05T00:00:00",
+                  "x_max": "2024-01-10T23:59:59",
+                  "y_min": 0.0,
+                  "y_max": 10.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_min",
+      "request_text": "TEST: spc_time_series plot. minimum request.",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_ewma",
+      "request_text": "TEST: EWMA alpha override.",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.8
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_window",
+      "request_text": "TEST: spc_time_series plot. Set window_days.",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.2
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "window_days": 3
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_legend",
+      "request_text": "TEST: spc_time_series plot. Hide legend",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.2
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": true,
+                  "show_limits": true,
+                  "legend": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_limits",
+      "request_text": "TEST: spc_time_series plot. Hide limits",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.2
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": true,
+                  "show_limits": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_ewma",
+      "request_text": "TEST: spc_time_series plot. Hide ewma",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.2
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_spc_time_series_points",
+      "request_text": "TEST: spc_time_series plot. Hide datapoints",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {
+            "ewma_alpha": 0.2
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png",
+                "params": {
+                  "show_raw": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_all_flags",
+      "request_text": "TEST: fleet_time_trend plot. Validate flags (show_raw/show_ewma/show_limits/legend + window_days + x/y bounds).",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": true,
+                  "show_limits": true,
+                  "legend": true,
+                  "window_days": 7,
+                  "x_min": "2024-01-04T00:00:00",
+                  "x_max": "2024-01-11T23:59:59",
+                  "y_min": 0.0,
+                  "y_max": 10.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_axis_limits",
+      "request_text": "TEST: fleet_time_trend plot. x/y bounds.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "x_min": "2024-01-04T00:00:00",
+                  "x_max": "2024-01-11T23:59:59",
+                  "y_min": 0.0,
+                  "y_max": 10.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_window",
+      "request_text": "TEST: fleet_time_trend plot. Window days.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "window_days": 3
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_legend",
+      "request_text": "TEST: fleet_time_trend plot. Hide legend.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": true,
+                  "show_limits": true,
+                  "legend": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_limits",
+      "request_text": "TEST: fleet_time_trend plot. Hide limits.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": true,
+                  "show_limits": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_ewma",
+      "request_text": "TEST: fleet_time_trend plot. Hide ewma.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "show_raw": true,
+                  "show_ewma": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_points",
+      "request_text": "TEST: fleet_time_trend plot. Hide datapoints.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png",
+                "params": {
+                  "show_raw": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_time_trend_min",
+      "request_text": "TEST: fleet_time_trend plot. Min request.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "cnc_fleet_vibration_time_trend_all_flags.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_all_flags",
+      "request_text": "TEST: fleet_boxplot plot. Validate show_limits, legend, window slicing, and y bounds. (x bounds generally not meaningful for boxplot but included for parser robustness).",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png",
+                "params": {
+                  "show_limits": true,
+                  "legend": false,
+                  "window_days": 3,
+                  "x_min": "2024-01-08T00:00:00",
+                  "x_max": "2024-01-12T23:59:59",
+                  "y_min": 0.0,
+                  "y_max": 10.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_weird_x_axis",
+      "request_text": "TEST: fleet_boxplot plot. Broken x_min/max.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png",
+                "params": {
+                  "show_limits": true,
+                  "legend": false,
+                  "window_days": 3,
+                  "x_min": "2024-01-10T00:00:00",
+                  "x_max": "2024-01-10T01:00:00",
+                  "y_min": 0.0,
+                  "y_max": 10.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_window",
+      "request_text": "TEST: fleet_boxplot plot. Window slicing",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png",
+                "params": {
+                  "show_limits": true,
+                  "legend": false,
+                  "window_days": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_legend",
+      "request_text": "TEST: fleet_boxplot plot. legend on.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png",
+                "params": {
+                  "show_limits": true,
+                  "legend": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_limits",
+      "request_text": "TEST: fleet_boxplot plot. Hide limits.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png",
+                "params": {
+                  "show_limits": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_boxplot_min",
+      "request_text": "TEST: fleet_boxplot plot. min request.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "cnc_fleet_vibration_boxplot_all_flags.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_ooc_summary_table",
+      "request_text": "TEST: fleet_ooc_summary table. Validate table generation and time slicing parameters. %OOC computed from RAW value.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_ooc_table",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "cnc_fleet_vibration_ooc_last_3_days.csv",
+                "params": {
+                  "window_days": 3
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_ooc_summary_table_min",
+      "request_text": "TEST: fleet_ooc_summary table. No params.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_ooc_table",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "cnc_fleet_vibration_ooc_last_3_days.csv"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_ooc_summary_1day",
+      "request_text": "TEST: fleet_ooc_summary table. 1 day.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_ooc_table",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "cnc_fleet_vibration_ooc_last_3_days.csv",
+                "params": {
+                  "window_days": 1
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_fleet_ooc_summary_400days",
+      "request_text": "TEST: fleet_ooc_summary table. 400 days.",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_vibration_ooc_table",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "cnc_fleet_vibration_ooc_last_3_days.csv",
+                "params": {
+                  "window_days": 400
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

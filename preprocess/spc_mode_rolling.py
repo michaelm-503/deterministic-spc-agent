@@ -67,10 +67,17 @@ def preprocess(df_long, processed_dir="data/processed"):
     # 3. SPC violation flag using EWMA
     # -----------------------------
 
+<<<<<<< Updated upstream
     df_long["spc_violation"] = (
         (df_long["ewma"] > df_long["ucl"]) |
         (df_long["ewma"] < df_long["lcl"])
     )
+=======
+    # expects columns: value, ucl, lcl
+    ucl_ok = df["ucl"].isna() | (df["value"] <= df["ucl"])
+    lcl_ok = df["lcl"].isna() | (df["value"] >= df["lcl"])
+    df["spc_violation"] = ~(ucl_ok & lcl_ok)
+>>>>>>> Stashed changes
 
 
     return df_long

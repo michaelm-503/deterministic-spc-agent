@@ -1,0 +1,188 @@
+{
+  "runs": [
+    {
+      "run_id": "test_multi_jobs_and_mixed_outputs",
+      "request_text": "TEST: multi-job run. Mix fleet plots, fleet table, and a single-entity add-on plot in the same run.",
+      "jobs": [
+        {
+          "job_id": "fleet_cnc_vibration_time_trend",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_all_limits_off.png",
+                "params": { "show_limits": false }
+              },
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_7_legend_off.png",
+                "params": { "window_days": 7, "legend": false }
+              },
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_3_points_on.png",
+                "params": { "window_days": 3, "show_raw": true }
+              },
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_1_ewma_off.png",
+                "params": { "window_days": 1, "show_ewma": false, "show_raw": true }
+              },
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_7_cnc01.png",
+                "params": { "window_days": 7, "entities":["CNC01"] }
+              },
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "fleet_time_trend_7_cnc01_cnc02.png",
+                "params": { "window_days": 7, "entities":["CNC01", "CNC02"] }
+              },
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "fleet_boxplot_3_raw_true.png",
+                "params": { "window_days": 3, "show_raw": true }
+              },
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "fleet_boxplot_1_limits_off.png",
+                "params": { "window_days": 1, "show_limits": false }
+              },
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "fleet_boxplot_1_cnc01.png",
+                "params": { "window_days": 1, "entities":["CNC01"] }
+              },
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "fleet_boxplot_1_cnc01_cnc02.png",
+                "params": { "window_days": 1, "entities":["CNC01", "CNC02"] }
+              }
+            ],
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "fleet_ooc_summary_3.csv",
+                "params": { "window_days": 3 }
+              },
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "fleet_ooc_summary_1.csv",
+                "params": { "window_days": 1 }
+              },
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "fleet_ooc_summary_1_cnc01.csv",
+                "params": { "window_days": 1, "entities":["CNC01"] }
+              },
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "fleet_ooc_summary_1_cnc01_cnc02.csv",
+                "params": { "window_days": 1, "entities":["CNC01", "CNC02"] }
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "fleet_cnc_vibration_boxplot",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "fleet_boxplot.png",
+                "params": { "window_days": 3, "show_limits": true }
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "single_entity_add_on_cnc01",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_zoom.png",
+                "params": { "window_days": 2, "legend": false, "show_raw": true }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "test_filename_collision_handling",
+      "request_text": "TEST: collision handling. Same plot_name and table_name repeated in one job; runner should de-dupe by appending _#.",
+      "jobs": [
+        {
+          "job_id": "collision_job",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "params": {},
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "collision.png",
+                "params": { "window_days": 7 }
+              },
+              {
+                "plot": "spc_time_series",
+                "plot_name": "collision.png",
+                "params": { "window_days": 3, "legend": false }
+              }
+            ],
+            "tables": [
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "collision.csv",
+                "params": { "window_days": 3 }
+              },
+              {
+                "table": "fleet_ooc_summary",
+                "table_name": "collision.csv",
+                "params": { "window_days": 7 }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

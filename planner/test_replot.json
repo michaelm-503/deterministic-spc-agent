@@ -1,0 +1,25 @@
+{
+  "mode": "replot",
+  "run_dir": "runs/2026-02-25T22-19-55",
+  "jobs": [
+    {
+      "job_id": "fleet_cnc_vibration_time_trend",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "fleet_time_trend",
+            "plot_name": "fleet_time_trend_7_cnc01_cnc02_cnc03.png",
+            "params": {
+              "window_days": 7,
+              "entities": [
+                "CNC01",
+                "CNC02",
+                "CNC03"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

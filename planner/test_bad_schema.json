@@ -1,0 +1,282 @@
+{
+  "runs": [
+    {
+      "request_text": "FAIL: run_id is missing"
+    },
+    {
+      "run_id": "fail_missing_request_text",
+      "jobs": []
+    },
+    {
+      "run_id": "fail_jobs_wrong_type",
+      "request_text": "FAIL: jobs should be a list, but is a dict",
+      "jobs": { "job_id": "bad_jobs_shape" }
+    },
+    {
+      "run_id": "fail_job_missing_required_keys",
+      "request_text": "FAIL: job missing sql_template/preprocess/filters",
+      "jobs": [
+        {
+          "job_id": "job_missing_sql_preprocess_filters"
+        }
+      ]
+    },
+    {
+      "run_id": "fail_sql_template_registry_mismatch",
+      "request_text": "FAIL: sql_template not in SQL_REGISTRY",
+      "jobs": [
+        {
+          "job_id": "bad_sql_template_key",
+          "sql_template": "does_not_exist_sql_template",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "should_not_run.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_preprocess_registry_mismatch",
+      "request_text": "FAIL: preprocess not in PREPROCESS_REGISTRY",
+      "jobs": [
+        {
+          "job_id": "bad_preprocess_key",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "does_not_exist_preprocess",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "should_not_run.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_filters_missing",
+      "request_text": "FAIL: filters missing entirely",
+      "jobs": [
+        {
+          "job_id": "no_filters",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "should_not_run.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_filters_wrong_type",
+      "request_text": "FAIL: filters must be dict, but is list",
+      "jobs": [
+        {
+          "job_id": "filters_list",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": ["CNC", "CNC01", "vibration_rms"],
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "should_not_run.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_outputs_wrong_type",
+      "request_text": "FAIL: outputs must be dict, but is string",
+      "jobs": [
+        {
+          "job_id": "outputs_string",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": "not_a_dict"
+        }
+      ]
+    },
+    {
+      "run_id": "fail_plots_wrong_type",
+      "request_text": "FAIL: outputs.plots must be list, but is dict",
+      "jobs": [
+        {
+          "job_id": "plots_dict",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": {
+              "plot": "spc_time_series",
+              "plot_name": "bad.png"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_plot_missing_plot_name",
+      "request_text": "FAIL: plot_name missing",
+      "jobs": [
+        {
+          "job_id": "plot_missing_plot_name",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_plot_registry_mismatch",
+      "request_text": "FAIL: plot key not in PLOT_REGISTRY",
+      "jobs": [
+        {
+          "job_id": "plot_bad_key",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "does_not_exist_plot",
+                "plot_name": "bad_plot.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_tables_wrong_type",
+      "request_text": "FAIL: outputs.tables must be list, but is string",
+      "jobs": [
+        {
+          "job_id": "tables_string",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": "not_a_list"
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_table_missing_table_name",
+      "request_text": "FAIL: table_name missing",
+      "jobs": [
+        {
+          "job_id": "table_missing_table_name",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "fleet_ooc_summary"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "fail_table_registry_mismatch",
+      "request_text": "FAIL: table key not in TABLE_REGISTRY",
+      "jobs": [
+        {
+          "job_id": "table_bad_key",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "does_not_exist_table",
+                "table_name": "bad_table.csv"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
