@@ -42,10 +42,11 @@ investigation, and replot capabilities.
 -   [CPR15 had vibration on Jan 9 and pressure instability on Jan 11.
     Show last 7 days for vibration and
     pressure.](#cpr15-had-vibration-on-jan-9-and-pressure-instability-on-jan-11-show-last-7-days-for-vibration-and-pressure)
+-   [Replot pressure for just the bad PM cycle. 1/10-1/12.](#replot-pressure-for-just-the-bad-pm-cycle-110-112)
 -   [After CPR15 post-PM pressure instability, show CPR fleet pressure
     last 3 days and CPR15
     separately.](#after-cpr15-post-pm-pressure-instability-show-cpr-fleet-pressure-last-3-days-and-cpr15-separately)
--   [Replot pressure for just the bad PM cycle. 1/10-1/12.](#replot-pressure-for-just-the-bad-pm-cycle-110-112)
+
 
 
 
@@ -843,6 +844,42 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
+# Replot pressure for just the bad PM cycle. 1/10-1/12.
+
+*Run ID: `replot`*
+
+## JSON Plan
+
+``` json
+{
+  "mode": "replot",
+  "run_dir": "runs/2026-02-26T20-38-03",
+  "jobs": [
+    {
+      "job_id": "cpr15_pressure_last7d",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "spc_time_series",
+            "plot_name": "cpr15_pressure_bad_pm_cycle_2024_01_10_12.png",
+            "params": {
+              "start_ts": "2024-01-10",
+              "end_ts": "2024-01-12"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+## Output Artifacts
+
+![Image](../assets/cpr15_pressure_bad_pm_cycle_2024_01_10_12.png)
+
+------------------------------------------------------------------------
+
 # After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.
 
 *Run ID: `demo_cpr_pressure_fleet_last3d_plus_cpr15`*
@@ -936,41 +973,5 @@ investigation, and replot capabilities.
 |  4 | CPR            | pressure_level | CPR15    |            136 |            0 |             0 |
 
 ![Image](../assets/cpr15_pressure_focus_last3d.png)
-
-------------------------------------------------------------------------
-
-# Replot pressure for just the bad PM cycle. 1/10-1/12.
-
-*Run ID: `replot`*
-
-## JSON Plan
-
-``` json
-{
-  "mode": "replot",
-  "run_dir": "runs/2026-02-26T20-38-03",
-  "jobs": [
-    {
-      "job_id": "cpr15_pressure_last7d",
-      "outputs": {
-        "plots": [
-          {
-            "plot": "spc_time_series",
-            "plot_name": "cpr15_pressure_bad_pm_cycle_2024_01_10_12.png",
-            "params": {
-              "start_ts": "2024-01-10",
-              "end_ts": "2024-01-12"
-            }
-          }
-        ]
-      }
-    }
-  ]
-}
-```
-
-## Output Artifacts
-
-![Image](../assets/cpr15_pressure_bad_pm_cycle_2024_01_10_12.png)
 
 ------------------------------------------------------------------------

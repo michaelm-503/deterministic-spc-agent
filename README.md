@@ -121,7 +121,7 @@ The LLM acts strictly as a planner, not an analyst.
 
 ![Image](assets/CPR11_demo.png)
 
-####Selected additional examples:
+#### Selected additional examples:
 
 - [The ARM technician will be out next week. Are any vibration PMs coming up?](docs/demo_gallery.md#the-arm-technician-will-be-out-next-week-are-any-vibration-pms-coming-up)
 
@@ -131,7 +131,8 @@ The LLM acts strictly as a planner, not an analyst.
 
 - [PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).](docs/demo_gallery.md#pmp09-had-tempcurrentrpm-issues-on-jan-12-show-temp-trend-last-3-days-and-an-ooc-summary-table-last-3-days-temp)
 
-- [After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.](docs/demo_gallery.md#after-cpr15-post-pm-pressure-instability-show-cpr-fleet-pressure-last-3-days-and-cpr15-separately)
+- [CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and
+    pressure.](#cpr15-had-vibration-on-jan-9-and-pressure-instability-on-jan-11-show-last-7-days-for-vibration-and-pressure)
 
 - [Replot pressure for just the bad PM cycle. 1/10-1/12.](docs/demo_gallery.md#replot-pressure-for-just-the-bad-pm-cycle-110-112)
 
