@@ -121,7 +121,7 @@ The LLM acts strictly as a planner, not an analyst.
 
 ![Image](assets/CPR11_demo.png)
 
-####Selected additional examples:
+#### Selected additional examples:
 
 - [The ARM technician will be out next week. Are any vibration PMs coming up?](docs/demo_gallery.md#the-arm-technician-will-be-out-next-week-are-any-vibration-pms-coming-up)
 
