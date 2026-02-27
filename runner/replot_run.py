@@ -67,6 +67,13 @@ def _apply_optional_time_slice(df: pd.DataFrame, params: dict | None) -> pd.Data
 
     return out
 
+def _apply_optional_entities(df, params):
+    entities = params.get("entities")
+    if not entities:
+        return df
+    if "entity" not in df.columns:
+        return df
+    return df[df["entity"].isin(entities)].copy()
 
 def _dedupe_name(name: str, used: set[str]) -> str:
     """If name already used, append _#, preserving extension."""
@@ -219,8 +226,9 @@ def replot_job(
         plot_name = _dedupe_name(base_name, used_names)
         plot_path = out_dir / plot_name
 
-        df_for_plot = _apply_optional_time_slice(processed_df, plot_params)
-
+        df_for_plot = _apply_optional_entities(processed_df, plot_params)
+        df_for_plot = _apply_optional_time_slice(df_for_plot, plot_params)
+        
         # Universal plot requirement: ts must exist for time-based rendering
         _require_columns(
             df_for_plot,
@@ -276,7 +284,8 @@ def replot_job(
         table_name = _dedupe_name(base_name, used_names)
         table_path = out_dir / table_name
 
-        df_for_table = _apply_optional_time_slice(processed_df, table_params)
+        df_for_table = _apply_optional_entities(processed_df, table_params)
+        df_for_table = _apply_optional_time_slice(df_for_table, table_params)
 
         # Most tables at least need entity, and for OOC summary we need value.
         # Keep universal requirement minimal: entity is common for grouping.

@@ -20,15 +20,17 @@ Instead of allowing AI models to generate analysis code or write SQL, this syste
 - Supports plot rework without re-running SQL or preprocessing
 - Verifies outputs via schema validation and hashing
 
-This project demonstrates how to integrate LLMs into manufacturing analytics without sacrificing engineering rigor.
+**Deterministic SPC Agent** demonstrates how LLMs can safely orchestrate manufacturing analytics without generating SQL, Python, or statistical logic.
 
-Public predictive manufacturing data from the [Industrial Machine Predictive Maintenance Dataset](https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance) was used for this demo.
+All analytics are executed through a guardrailed, registry-driven execution engine with deterministic outputs and full run traceability.
+
+Public predictive manufacturing data from the [Industrial Machine Predictive Maintenance Dataset](https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance) was used for this repository.
 
 ---
 
 ## Why This Exists
 
-Most AI analytics systems suffer from:
+##### Most AI analytics systems suffer from:
 
 - Non-deterministic outputs
 - Hidden logic
@@ -36,13 +38,21 @@ Most AI analytics systems suffer from:
 - Weak validation
 - Unsafe SQL or code generation
 
-This system enforces:
+##### This system enforces:
 
 - Deterministic mathematical processing
 - Full run traceability
 - Strict JSON schema validation
 - Tool allow-lists
 - Artifact hashing and verification
+
+##### Determinism Contract:
+- SQL templates are version-controlled
+- Preprocess logic is deterministic
+- No stochastic models
+- Plot rendering is parameterized only
+- Replot never re-executes SQL
+- Run artifacts are immutable
 
 The LLM acts strictly as a planner, not an analyst.
 
@@ -72,26 +82,35 @@ The LLM acts strictly as a planner, not an analyst.
 
 ```
 {
-  "run_id": "demo_cpr11_health_check",
-  "jobs": [
+  "runs": [
     {
-      "job_id": "CPR11_temperature_motor",
-      "sql_template": "entity_sensor_history",
-      "preprocess": "ewma_spc",
-      "filters": {
-        "entity_group": "CPR",
-        "entity": "CPR11",
-        "sensor": "temperature_motor"
-      },
-      "outputs": {
-        "plots": [
-          {
-            "plot_name": "CPR11_temperature_motor_spc.png",
-            "plot": "spc_time_series"
+      "run_id": "demo_cpr11_health_check",
+      "request_text": "CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?",
+      "jobs": [
+        {
+          "job_id": "CPR11_temperature_motor",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR11",
+            "sensor": "temperature_motor",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr11_temperature_motor_spc.png"
+              }
+            ]
           }
-        ]
-      }
-    }, ...
+        }, ...
+      ]
+    }
+  ]
+}
 ```
 
 **System generates:**
@@ -101,6 +120,22 @@ The LLM acts strictly as a planner, not an analyst.
 - Hash verification output
 
 ![Image](assets/CPR11_demo.png)
+
+####Selected additional examples:
+
+- [The ARM technician will be out next week. Are any vibration PMs coming up?](docs/demo_gallery.md#the-arm-technician-will-be-out-next-week-are-any-vibration-pms-coming-up)
+
+- [PMP06 had a vibration event around Jan 3. Show vibration trend ±3 days around that date.](docs/demo_gallery.md#pmp06-had-a-vibration-event-around-jan-3-show-vibration-trend-3-days-around-that-date)
+
+- [PMP07 had current/rpm issues around Jan 2. Show both current and rpm ±2 days.](docs/demo_gallery.md#pmp07-had-currentrpm-issues-around-jan-2-show-both-current-and-rpm-2-days)
+
+- [PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).](docs/demo_gallery.md#pmp09-had-tempcurrentrpm-issues-on-jan-12-show-temp-trend-last-3-days-and-an-ooc-summary-table-last-3-days-temp)
+
+- [After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.](docs/demo_gallery.md#after-cpr15-post-pm-pressure-instability-show-cpr-fleet-pressure-last-3-days-and-cpr15-separately)
+
+- [Replot pressure for just the bad PM cycle. 1/10-1/12.](docs/demo_gallery.md#replot-pressure-for-just-the-bad-pm-cycle-110-112)
+
+- View more examples in the [Demo Gallery](docs/demo_gallery.md)
 
 ---
 
@@ -119,7 +154,7 @@ Deterministic Preprocessing
       ↓
 Plot/Table Generation
       ↓
-Verification + Run Artifacts
+Verification (optional, extensible) + Run Artifacts
 ```
 
 The LLM will never:
@@ -208,13 +243,16 @@ This notebook:
 Each execution creates:
 ```
 runs/<timestamp>/
-├── plan.json
-├── extracted_data.csv
-├── processed_data.csv
-├── spc_reference.csv
-├── plot.png
-├── reproduce.py
-└── hashes.json
+├── run.json
+├── job_1/
+│   ├── job.json
+│   ├── extracted_data.csv
+│   ├── processed_data.csv
+│   ├── <plot_name>.png
+│   └── <table_name>.csv
+├── job_2/
+│   └── ...
+└── hashes.json (optional)
 ```
 
 Running reproduce.py regenerates identical outputs.
@@ -234,9 +272,9 @@ All results are:
 - Deterministic preprocessing
 - Guardrailed execution
 
-#### Phase 2 – Expand workflows ✅
+#### Phase 2 – An Execution Framework ✅
 - Single-tool and fleet-level analytics workflows
-- Plot-level parameter overrides
+- Plot-level parameter overrides and slicing
 - Replot (visual-only rework) mode
 - SQL template registry with parameter signatures
 - JSON schema validation framework

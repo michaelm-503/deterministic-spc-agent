@@ -8,9 +8,8 @@ def _latest_nonnull(series: pd.Series):
 def plot_fleet_time_trend(df, job: dict, params: dict, output_path):
     """
     Fleet-level time trend:
-    - One line per entity
-    - Optional raw scatter
-    - No SPC limits drawn
+    - One ewma trace per entity
+    - Optional raw scatter per entity
     """
 
     filters = job["filters"]
@@ -19,7 +18,6 @@ def plot_fleet_time_trend(df, job: dict, params: dict, output_path):
 
     params = params or {}
 
-    entities = params.get("entities", list(df["entity"].unique()))
     show_raw = bool(params.get("show_raw", False))
     show_ewma = bool(params.get("show_ewma", True))
     show_limits = bool(params.get("show_limits", True))
@@ -33,7 +31,6 @@ def plot_fleet_time_trend(df, job: dict, params: dict, output_path):
     # Filter by group + sensor only
     chart_df = df[
         (df["entity_group"] == entity_group) &
-        (df["entity"].isin(entities)) &
         (df["sensor"] == sensor)
     ].copy()
 

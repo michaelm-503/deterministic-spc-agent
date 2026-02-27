@@ -60,13 +60,13 @@
               },
               {
                 "plot": "fleet_boxplot",
-                "plot_name": "fleet_boxplot_1_cnc01.png",
-                "params": { "window_days": 1, "entities":["CNC01"] }
+                "plot_name": "fleet_boxplot_7_cnc03.png",
+                "params": { "window_days": 7, "entities":["CNC03"] }
               },
               {
                 "plot": "fleet_boxplot",
-                "plot_name": "fleet_boxplot_1_cnc01_cnc02.png",
-                "params": { "window_days": 1, "entities":["CNC01", "CNC02"] }
+                "plot_name": "fleet_boxplot_7_cnc01_cnc03.png",
+                "params": { "window_days": 7, "entities":["CNC01", "CNC03"] }
               }
             ],
             "tables": [
@@ -82,13 +82,13 @@
               },
               {
                 "table": "fleet_ooc_summary",
-                "table_name": "fleet_ooc_summary_1_cnc01.csv",
-                "params": { "window_days": 1, "entities":["CNC01"] }
+                "table_name": "fleet_ooc_summary_7_cnc03.csv",
+                "params": { "window_days": 7, "entities":["CNC03"] }
               },
               {
                 "table": "fleet_ooc_summary",
-                "table_name": "fleet_ooc_summary_1_cnc01_cnc02.csv",
-                "params": { "window_days": 1, "entities":["CNC01", "CNC02"] }
+                "table_name": "fleet_ooc_summary_7_cnc01_cnc03.csv",
+                "params": { "window_days": 7, "entities":["CNC01", "CNC03"] }
               }
             ]
           }

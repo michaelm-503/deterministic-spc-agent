@@ -26,9 +26,9 @@ Defaults are handled internally by the backend. The LLM should only provide para
           "sql_template": "string",
           "preprocess": "string",
           "filters": {
-            "entity_group": "string | null",
+            "entity_group": "string",
             "entity": "string | null",
-            "sensor": "string | null",
+            "sensor": "string",
             "start_ts": "ISO-8601 datetime | null",
             "end_ts": "ISO-8601 datetime | null"
           },
@@ -68,6 +68,12 @@ Defaults are handled internally by the backend. The LLM should only provide para
 
 ### Top-Level
 
+The root JSON object is a **plan library**. It must contain a single key `runs`: an array of **run plans**
+
+Each **run plan** contains one or more **jobs**, and each job contains one or more output specs (plots and/or tables).
+
+Note: The pipeline executes one run plan at a time (one element of runs).
+
 | Field           | Required  | Description                                     |
 |-----------------|-----------|-------------------------------------------------|
 | runs            | ✅        | List of independent run objects                 |
@@ -101,9 +107,9 @@ Defaults are handled internally by the backend. The LLM should only provide para
 
 | Field           | Required  | Description                                     |
 |-----------------|-----------|-------------------------------------------------|
-| entity_group    | Depends   | Required for fleet-level views                  |
+| entity_group    | ✅         | Required for fleet-level views                  |
 | entity          | Depends   | Required for single-entity views                |
-| sensor          | Depends   | Required for sensor-based views                 |
+| sensor          | ✅         | Required for sensor-based views                 |
 | start_ts        | ❌        | ISO datetime; SQL-level filter (optional)       |
 | end_ts          | ❌        | ISO datetime; SQL-level filter (optional)       |
 
@@ -129,24 +135,27 @@ Outputs are optional. If omitted, the job executes but produces no artifacts.
 
 ### Supported Plot-Level Parameters
 
-All parameters are optional.
+All parameters are optional and will default to settings below, as indicated by chart type.
 
-| Parameter   | Type     | Default | Description                           |
-|-------------|----------|---------|---------------------------------------|
-| show_raw    | bool     | false   | Show raw scatter points               |
-| show_ewma   | bool     | true    | Show EWMA line                        |
-| show_limits | bool     | true    | Show SPC limits                       |
-| legend      | bool     | true    | Show legend                           |
-| window_days | int      | null    | Slice last N days                     |
-| x_min       | datetime | null    | Override x-axis lower bound           |
-| x_max       | datetime | null    | Override x-axis upper bound           |
-| y_min       | float    | null    | Override y-axis lower bound           |
-| y_max       | float    | null    | Override y-axis upper bound           |
-| entities    | list     | [all]   | Entity subset on fleet charts         |
+| Parameter   | Type     | Description                           | Entity Time Trend | Fleet Time Trend | Boxplot |
+|-------------|----------|---------------------------------------|-------------------|------------------|---------|
+| show_raw    | bool     | Show raw scatter points               | true              | false            | n/a     |
+| show_ewma   | bool     | Show EWMA line                        | true              | true             | false   |
+| show_limits | bool     | Show SPC limits                       | true              | true             | true    |
+| legend      | bool     | Show legend                           | true              | true             | false   |
+| window_days | int      | Slice last N days of dataset          | null              | null             | null    |
+| x_min       | datetime | Override x-axis lower bound           | null              | null             | n/a     |
+| x_max       | datetime | Override x-axis upper bound           | null              | null             | n/a     |
+| y_min       | float    | Override y-axis lower bound           | null              | null             | null    |
+| y_max       | float    | Override y-axis upper bound           | null              | null             | null    |
+| entities    | list     | Entity subset on fleet charts         | n/a               | [ *all* ]        | [ *all* ] |
 
 Notes:
 - Violations are shown only if show_limits=true.
 - Limits are drawn using the latest non-null limit values.
+- Violations are computed from raw values vs. limits (null-safe).
+- `window_days` and `entities` are applied after SQL + preprocessing and before each plot call
+- `x_min`/`x_max` is applied to plot axis.
 	
 ## Table Specification
 
@@ -162,12 +171,16 @@ Notes:
 
 | Parameter   | Type     | Default | Description                           |
 |-------------|----------|---------|---------------------------------------|
-| window_days | int      | null    | Slice last N days                     |
+| window_days | int      | null    | Slice last N days of dataset          |
 | start_ts    | datetime | null    | Explicit start bound                  |
 | end_ts      | datetime | null    | Explicit end bound                    |
 | entities    | list     | [all]   | Entity subset on fleet charts         |
 
-Tables must write a CSV artifact.
+Notes:
+- Tables must write a CSV artifact.
+- Time slicing and `entities` are applied after SQL + preprocessing and before each table call.
+- Precedence: if `start_ts` or `end_ts` is provided, those bounds are applied; otherwise `window_days` is applied (if present).
+
 
 ------------------------------------------------------------------------
 

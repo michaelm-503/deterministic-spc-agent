@@ -37,7 +37,7 @@ def plot_spc_time_series(df, job: dict, params: dict | None, output_path):
     params = params or {}
 
     # Plot toggles
-    show_raw = bool(params.get("show_raw", False))
+    show_raw = bool(params.get("show_raw", True))
     show_ewma = bool(params.get("show_ewma", True))
     show_limits = bool(params.get("show_limits", True))
     legend = bool(params.get("legend", True))

@@ -9,8 +9,8 @@ def plot_fleet_boxplot(df, job: dict, params: dict, output_path):
     """
     Fleet-level boxplot:
     - x-axis: entity
-    - y-axis: sensor values (defaults to EWMA if available, else raw value)
-    - Designed to be called AFTER runner applies any optional time slicing.
+    - y-axis: sensor values (show_ewma='True' to plot ewma values instead of raw data)
+    - Runner applies any desired time slicing BEFORE calling this function.
 
     Parameters
     ----------
@@ -19,7 +19,7 @@ def plot_fleet_boxplot(df, job: dict, params: dict, output_path):
     job : dict
         job dict passed from JSON planner (uses filters for title/context)
     params : dict
-        plot-level params (legend, y_min/y_max, use_ewma)
+        plot-level params (legend, y_min/y_max, show_ewma)
     output_path : str or Path
         File path to save the plot
     """
@@ -30,23 +30,15 @@ def plot_fleet_boxplot(df, job: dict, params: dict, output_path):
 
     params = params or {}
 
-    entities = params.get("entities", list(df["entity"].unique()))
-    
-    # For boxplots, legend is usually unnecessary, but keep as a supported toggle
     legend = bool(params.get("legend", False))
-    
     show_limits = bool(params.get("show_limits", True))
-
-    # Prefer EWMA for stability unless explicitly disabled
-    use_ewma = bool(params.get("use_ewma", True))
-
+    show_ewma = bool(params.get("show_ewma", False))
     y_min = params.get("y_min", None)
     y_max = params.get("y_max", None)
 
     # Filter by group + sensor only (defensive)
     chart_df = df[
         (df["entity_group"] == entity_group) &
-        (df["entity"].isin(entities)) &
         (df["sensor"] == sensor)
     ].copy()
 
@@ -61,7 +53,7 @@ def plot_fleet_boxplot(df, job: dict, params: dict, output_path):
     lcl = _latest_nonnull(chart_df["lcl"]) if "lcl" in chart_df.columns else None
     
     # Choose series to plot
-    if use_ewma and "ewma" in chart_df.columns:
+    if show_ewma and "ewma" in chart_df.columns:
         y_col = "ewma"
         y_label = f"{sensor} (EWMA)"
     elif "value" in chart_df.columns:

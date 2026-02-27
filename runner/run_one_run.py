@@ -114,7 +114,8 @@ def execute_job(con, project_root: Path, run_dir: Path, job: dict, run_id: str |
         existing_names.add(plot_name)
         plot_path = job_dir / plot_name
     
-        df_for_plot = _apply_optional_time_slice(processed_df, plot_params)
+        df_for_plot = _apply_optional_entities(processed_df, plot_params)
+        df_for_plot = _apply_optional_time_slice(df_for_plot, plot_params)
 
         # Basic universal requirements for all plots
         _require_columns(
@@ -161,7 +162,8 @@ def execute_job(con, project_root: Path, run_dir: Path, job: dict, run_id: str |
         table_path = job_dir / table_name
     
         # Optional time slice only if explicitly requested in table params
-        df_for_table = _apply_optional_time_slice(processed_df, table_params)
+        df_for_table = _apply_optional_entities(processed_df, table_params)
+        df_for_table = _apply_optional_time_slice(df_for_table, table_params)
 
         _require_columns(
             df_for_table,
@@ -242,6 +244,14 @@ def _apply_optional_time_slice(df, plot_params):
         df = df[df["ts"] >= start_time]
 
     return df
+
+def _apply_optional_entities(df, params):
+    entities = params.get("entities")
+    if not entities:
+        return df
+    if "entity" not in df.columns:
+        return df
+    return df[df["entity"].isin(entities)].copy()
 
 def _require_columns(df, required_cols, *, run_id, job_id, stage, component):
     """

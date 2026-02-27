@@ -12,7 +12,7 @@ def compute_fleet_ooc_summary(df: pd.DataFrame, job: dict, params: dict | None =
     - OOC is defined by SPC limits; we use:
         - 'spc_violation' if present
         - otherwise compute from ewma/value vs ucl/lcl if available
-    - If limits are missing, %OOC will be NaN for that entity.
+    - If limits are missing, %OOC will be 0% for that entity.
 
     Output
     ------
@@ -21,7 +21,6 @@ def compute_fleet_ooc_summary(df: pd.DataFrame, job: dict, params: dict | None =
     """
 
     params = params or {}
-    entities = params.get("entities", list(df["entity"].unique()))
     
     filters = job["filters"]
     sensor = filters.get("sensor")
@@ -29,7 +28,6 @@ def compute_fleet_ooc_summary(df: pd.DataFrame, job: dict, params: dict | None =
 
     chart_df = df[
         (df["entity_group"] == entity_group) &
-        (df["entity"].isin(entities)) &
         (df["sensor"] == sensor)
     ].copy()
 

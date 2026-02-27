@@ -277,6 +277,32 @@
           }
         }
       ]
+    },
+    {
+      "run_id": "test_spc_time_series_min",
+      "request_text": "TEST: Entity/Entity Group Mismatch.",
+      "jobs": [
+        {
+          "job_id": "cnc01_vibration_spc_all_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "ARM",
+            "entity": "CNC01",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc01_vibration_spc_all_flags.png"
+              }
+            ]
+          }
+        }
+      ]
     }
   ]
 }
