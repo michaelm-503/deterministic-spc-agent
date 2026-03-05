@@ -13,8 +13,8 @@
 version: 1
 metadata:
   content_hash:
-    linux-64: a484175e24efe94b0311a36bc5cf260ebce8ed80ddbde1b6b0369823b1b88252
-    osx-arm64: a8f23abf689cdf2e212c1d3e19e432ec20538cba3d448ee3b98d0b8d5f3e787e
+    linux-64: 6d31edb4a89619a3757233c34f53c4d6922cc61014aef84d6170ad3cd53b263b
+    osx-arm64: 9c96538ad04ab3052fae6d53ec5cd2f5413759ef400d61d906bcd52cbc972559
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -4114,7 +4114,7 @@ package:
   category: main
   optional: false
 - name: pandas
-  version: 2.3.3
+  version: 3.0.1
   manager: conda
   platform: linux-64
   dependencies:
@@ -4122,34 +4122,30 @@ package:
     libgcc: '>=14'
     libstdcxx: '>=14'
     numpy: '>=1.23,<3'
-    python: '>=3.11,<3.12.0a0'
+    python: ''
     python-dateutil: '>=2.8.2'
-    python-tzdata: '>=2022.7'
     python_abi: 3.11.*
-    pytz: '>=2020.1'
-  url: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.3.3-py311hed34c8f_2.conda
+  url: https://conda.anaconda.org/conda-forge/linux-64/pandas-3.0.1-py311h8032f78_0.conda
   hash:
-    md5: 2366b5470cf61614c131e356efe9f74c
-    sha256: a2af9dbc4827db418a73127d4001bb3c2ee19adcd2d4387d6bc049c3780d2a62
+    md5: 3ac73c673df24589b5b84d43a4afd235
+    sha256: 3e58067de2e0b8220cf1323c1fc736028b2a117b7a7173bfe67f7da11094271f
   category: main
   optional: false
 - name: pandas
-  version: 2.3.3
+  version: 3.0.1
   manager: conda
   platform: osx-arm64
   dependencies:
     __osx: '>=11.0'
     libcxx: '>=19'
     numpy: '>=1.23,<3'
-    python: '>=3.11,<3.12.0a0'
+    python: 3.11.*
     python-dateutil: '>=2.8.2'
-    python-tzdata: '>=2022.7'
     python_abi: 3.11.*
-    pytz: '>=2020.1'
-  url: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-2.3.3-py311hdb8e4fa_2.conda
+  url: https://conda.anaconda.org/conda-forge/osx-arm64/pandas-3.0.1-py311h4a068b9_0.conda
   hash:
-    md5: da2e5c7c0a3061398c8a1e225f2e339e
-    sha256: dd0c4ade846921acbf6ded79b7589e72f58689129dabc8290deec455539e9235
+    md5: e853dd807ee17d7d4f6c3c57b29456ac
+    sha256: 1a0f57d3c5fb08e97c8a92f560e1ce011f4ab5a1185eacb60e83c00458684dc4
   category: main
   optional: false
 - name: pandocfilters
@@ -4887,30 +4883,6 @@ package:
   hash:
     md5: 8fcb6b0e2161850556231336dae58358
     sha256: fddf123692aa4b1fc48f0471e346400d9852d96eeed77dbfdd746fa50a8ff894
-  category: main
-  optional: false
-- name: pytz
-  version: '2025.2'
-  manager: conda
-  platform: linux-64
-  dependencies:
-    python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
-  hash:
-    md5: bc8e3267d44011051f2eb14d22fb0960
-    sha256: 8d2a8bf110cc1fc3df6904091dead158ba3e614d8402a83e51ed3a8aa93cdeb0
-  category: main
-  optional: false
-- name: pytz
-  version: '2025.2'
-  manager: conda
-  platform: osx-arm64
-  dependencies:
-    python: '>=3.9'
-  url: https://conda.anaconda.org/conda-forge/noarch/pytz-2025.2-pyhd8ed1ab_0.conda
-  hash:
-    md5: bc8e3267d44011051f2eb14d22fb0960
-    sha256: 8d2a8bf110cc1fc3df6904091dead158ba3e614d8402a83e51ed3a8aa93cdeb0
   category: main
   optional: false
 - name: pyyaml

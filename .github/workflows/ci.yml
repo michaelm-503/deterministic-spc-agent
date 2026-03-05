@@ -21,16 +21,21 @@ jobs:
           auto-activate: false
           use-mamba: true
           conda-remove-defaults: true
-          environment-file: environment.yml
-          activate-environment: agentic_mfg
+
+      - name: Install from lockfile
+        shell: bash -l {0}
+        run: |
+          mamba env create -n agentic_mfg -f conda-lock.yml
 
       - name: Verify Python
         shell: bash -l {0}
         run: |
+          conda activate agentic_mfg
           python --version
           python -c "import sys; print(sys.executable)"
 
       - name: Run smoke test
         shell: bash -l {0}
         run: |
+          conda activate agentic_mfg
           python tests/smoke_test.py
