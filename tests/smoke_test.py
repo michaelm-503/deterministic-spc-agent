@@ -4,7 +4,7 @@ tests/smoke_test.py
 Minimal smoke test for Deterministic SPC Agent (Phase 2).
 
 What it checks:
-- static_plan.json loads
+- demo_phase_2.json loads
 - plan library validates (light validation)
 - one run executes end-to-end
 - expected artifacts exist per job:
@@ -50,7 +50,7 @@ def _assert_any_glob(dir_path: Path, pattern: str, msg: str):
 def main():
     project_root = Path(__file__).resolve().parents[1]
 
-    plan_path = project_root / "planner" / "static_plan.json"
+    plan_path = project_root / "planner" / "demo_phase_2.json"
     _assert_exists(plan_path, "Missing plan library file")
 
     plan_lib = json.loads(plan_path.read_text())
@@ -61,7 +61,7 @@ def main():
 
     runs = plan_lib.get("runs", [])
     if not isinstance(runs, list) or len(runs) == 0:
-        raise AssertionError("static_plan.json must contain a non-empty 'runs' list")
+        raise AssertionError("demo_phase_2.json must contain a non-empty 'runs' list")
 
     run_index = int(os.environ.get("RUN_INDEX", "0"))
     if run_index < 0 or run_index >= len(runs):
