@@ -7,6 +7,7 @@ import duckdb
 
 from runner.registry import SQL_REGISTRY, PREPROCESS_REGISTRY, PLOT_REGISTRY, TABLE_REGISTRY
 from runner.validate_plan import validate_run_plan
+from verify.compute_hashes import compute_run_hashes, write_hash_manifest
 
 def execute_job(con, project_root: Path, run_dir: Path, job: dict, run_id: str | None) -> list[Path]:
     """
@@ -218,7 +219,11 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
                 ) from e
     finally:
         con.close()
-
+        
+    # Create hashes
+    hashes = compute_run_hashes(run_dir)
+    write_hash_manifest(run_dir, hashes)
+    
     return run_dir
 
 def _parse_ts(ts):

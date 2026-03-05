@@ -25,17 +25,31 @@ jobs:
       - name: Install from lockfile
         shell: bash -l {0}
         run: |
+          mamba env remove -n agentic_mfg -y || true
           mamba env create -n agentic_mfg -f conda-lock.yml
 
-      - name: Verify Python
+      - name: Verify Python + imports
         shell: bash -l {0}
         run: |
-          conda activate agentic_mfg
-          python --version
-          python -c "import sys; print(sys.executable)"
+          mamba run -n agentic_mfg python --version
+          mamba run -n agentic_mfg python -c "import sys; print(sys.executable)"
+          mamba run -n agentic_mfg python -c "import duckdb, pandas, numpy, matplotlib"
 
-      - name: Run smoke test
+      - name: Run smoke test + verify hashes
         shell: bash -l {0}
         run: |
-          conda activate agentic_mfg
-          python tests/smoke_test.py
+          set -euo pipefail
+
+          # Ensure clean run directory
+          rm -rf runs
+          mkdir -p runs
+
+          # 1) Run the smoke test (creates runs/<timestamp>/...)
+          mamba run -n agentic_mfg python tests/smoke_test.py
+
+          # 2) Find newest run directory produced by the test
+          RUN_DIR="$(ls -1dt runs/*/ | head -n 1)"
+          echo "Newest run_dir: ${RUN_DIR}"
+
+          # 3) Verify hashes end-to-end
+          mamba run -n agentic_mfg python -m spc_agent verify "${RUN_DIR}"

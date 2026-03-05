@@ -32,6 +32,7 @@ from typing import Any
 import pandas as pd
 
 from runner.registry import PLOT_REGISTRY, TABLE_REGISTRY
+from verify.compute_hashes import compute_run_hashes, write_hash_manifest
 
 
 def _apply_optional_time_slice(df: pd.DataFrame, params: dict | None) -> pd.DataFrame:
@@ -106,6 +107,25 @@ def _require_columns(
             f"(run_dir='{run_dir}')"
         )
 
+def _resolve_run_dir(plan: dict, project_root: Path, override_run_dir: str | None) -> Path:
+    if override_run_dir:
+        run_dir = Path(override_run_dir)
+        if not run_dir.is_absolute():
+            run_dir = (project_root / run_dir).resolve()
+        return run_dir
+
+    # fallback to plan value
+    run_dir_str = plan.get("run_dir")
+    if not run_dir_str:
+        raise ValueError(
+            "Replot plan missing required key 'run_dir'. "
+            "Provide it in JSON or pass --run-dir to override."
+        )
+
+    run_dir = Path(run_dir_str)
+    if not run_dir.is_absolute():
+        run_dir = (project_root / run_dir).resolve()
+    return run_dir
 
 def replot_job(
     run_dir: Path | str,
@@ -314,10 +334,15 @@ def replot_job(
         created["tables"].append(str(table_path))
 
     (out_dir / "created_artifacts.json").write_text(json.dumps(created, indent=2))
+    
+    # Create hashes
+    hashes = compute_run_hashes(out_dir)
+    write_hash_manifest(out_dir, hashes)
+    
     return out_dir
 
 
-def replot_from_plan(plan: dict, project_root: Path | str) -> list[Path]:
+def replot_from_plan(plan: dict, project_root: Path | str, *, override_run_dir: str | None = None) -> list[Path]:
     """
     Convenience: replot based on a plan object.
 
@@ -335,10 +360,8 @@ def replot_from_plan(plan: dict, project_root: Path | str) -> list[Path]:
         raise ValueError("plan.mode must be 'replot'")
 
     project_root = Path(project_root)
-    if "run_dir" not in plan:
-        raise ValueError("Missing required key 'run_dir' in replot plan")
-
-    run_dir = project_root / plan["run_dir"]
+    run_dir = _resolve_run_dir(plan, project_root, override_run_dir)
+    
     if not run_dir.exists():
         raise FileNotFoundError(
             f"Run directory not found: '{run_dir}'. "
@@ -357,5 +380,5 @@ def replot_from_plan(plan: dict, project_root: Path | str) -> list[Path]:
             raise ValueError(f"Missing required key 'job_id' at plan.jobs[{i}]")
         outputs = job_spec.get("outputs", {}) or {}
         out_dirs.append(replot_job(run_dir, job_spec["job_id"], outputs))
-
+    
     return out_dirs

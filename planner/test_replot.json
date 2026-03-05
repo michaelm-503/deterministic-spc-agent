@@ -1,21 +1,16 @@
 {
   "mode": "replot",
-  "run_dir": "runs/2026-02-25T22-19-55",
+  "run_dir": "runs/2026-03-05T10-06-09",
   "jobs": [
     {
-      "job_id": "fleet_cnc_vibration_time_trend",
+      "job_id": "CPR11_temperature_motor",
       "outputs": {
         "plots": [
           {
-            "plot": "fleet_time_trend",
-            "plot_name": "fleet_time_trend_7_cnc01_cnc02_cnc03.png",
+            "plot": "spc_time_series",
+            "plot_name": "cpr11_temperature_motor_spc.png",
             "params": {
-              "window_days": 7,
-              "entities": [
-                "CNC01",
-                "CNC02",
-                "CNC03"
-              ]
+              "window_days": 1
             }
           }
         ]

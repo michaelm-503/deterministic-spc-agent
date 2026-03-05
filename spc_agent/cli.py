@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 def _load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"JSON file not found: {path}")
@@ -89,9 +88,9 @@ def cmd_replot(args: argparse.Namespace) -> int:
 
     root = _project_root(args.project_root)
     plan_or_lib = _load_json(Path(args.plan_json))
-    run_plan = _resolve_run(plan_or_lib, args.run_index)
+    replot_plan = _resolve_run(plan_or_lib, args.run_index)
 
-    out = replot_from_plan(run_plan, root)
+    out = replot_from_plan(replot_plan, root, override_run_dir=args.run_dir)
 
     # replot_from_plan may return Path or list[Path]; normalize for printing
     if isinstance(out, list):
@@ -102,6 +101,16 @@ def cmd_replot(args: argparse.Namespace) -> int:
 
     return 0
 
+def cmd_verify(args: argparse.Namespace) -> int:
+    from verify.verify_hashes import verify_run_hashes, format_verification_result
+
+    run_dir = Path(args.run_dir)
+    if not run_dir.exists():
+        raise FileNotFoundError(f"Run directory not found: {run_dir}")
+    
+    result = verify_run_hashes(run_dir)
+    print(format_verification_result(result))
+    return 0 if result.ok else 2
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
@@ -131,8 +140,14 @@ def build_parser() -> argparse.ArgumentParser:
     pp = sub.add_parser("replot", help="Replot from an existing run plan JSON (no SQL/preprocess).")
     pp.add_argument("plan_json", help="Path to run JSON (or plan library).")
     pp.add_argument("--run-index", type=int, default=None, help="Index into runs[] when plan_json is a library.")
+    pp.add_argument("--run-dir", default=None, help="Override run_dir from the JSON (runs/<timestamp>). Useful for manual replot.")
     pp.set_defaults(func=cmd_replot)
 
+    # verify
+    pf = sub.add_parser("verify", help="Verify artifacts from a run directory.")
+    pf.add_argument("run_dir", help="Path to run directory (runs/<timestamp>).")
+    pf.set_defaults(func=cmd_verify)
+    
     return p
 
 
