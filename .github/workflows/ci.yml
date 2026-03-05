@@ -9,18 +9,20 @@ on:
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Miniconda
+      - name: Set up Miniforge (conda-forge only)
         uses: conda-incubator/setup-miniconda@v3
         with:
+          miniforge-variant: Miniforge3
+          miniforge-version: latest
+          auto-activate: false
+          use-mamba: true
+          conda-remove-defaults: true
           environment-file: environment.yml
           activate-environment: agentic_mfg
-          auto-activate-base: false
-          use-mamba: true
 
       - name: Verify Python
         shell: bash -l {0}
