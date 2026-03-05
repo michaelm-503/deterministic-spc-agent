@@ -1,12 +1,13 @@
 name: agentic_mfg
 channels:
   - conda-forge
+channel_priority: strict
 dependencies:
   - python=3.11
-  - pandas
-  - numpy
-  - duckdb
-  - matplotlib
+  - duckdb>=1.0,<2
+  - pandas>=2.0,<3
+  - numpy>=1.26,<3
+  - matplotlib>=3.8,<4
   - jupyter
-  - pip
   - tabulate
+  - pip
