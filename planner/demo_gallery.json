@@ -1,4 +1,5 @@
 {
+  "_comment": "Demonstration plan library used in README and docs/demo_gallery.md",
   "runs": [
     {
       "run_id": "demo_cpr11_health_check",
