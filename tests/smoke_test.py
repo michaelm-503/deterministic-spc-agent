@@ -4,7 +4,7 @@ tests/smoke_test.py
 Minimal smoke test for Deterministic SPC Agent (Phase 2).
 
 What it checks:
-- demo_phase_2.json loads
+- demo_gallery.json loads
 - plan library validates (light validation)
 - one run executes end-to-end
 - expected artifacts exist per job:
@@ -26,6 +26,7 @@ import json
 import os
 import sys
 from pathlib import Path
+import duckdb
 
 # Add project root to Python path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -50,7 +51,7 @@ def _assert_any_glob(dir_path: Path, pattern: str, msg: str):
 def main():
     project_root = Path(__file__).resolve().parents[1]
 
-    plan_path = project_root / "planner" / "demo_phase_2.json"
+    plan_path = project_root / "planner" / "demo_gallery.json"
     _assert_exists(plan_path, "Missing plan library file")
 
     plan_lib = json.loads(plan_path.read_text())
@@ -61,7 +62,7 @@ def main():
 
     runs = plan_lib.get("runs", [])
     if not isinstance(runs, list) or len(runs) == 0:
-        raise AssertionError("demo_phase_2.json must contain a non-empty 'runs' list")
+        raise AssertionError("demo_gallery.json must contain a non-empty 'runs' list")
 
     run_index = int(os.environ.get("RUN_INDEX", "0"))
     if run_index < 0 or run_index >= len(runs):
@@ -70,13 +71,37 @@ def main():
     run_plan = runs[run_index]
     print(f"▶ Running smoke test: run_index={run_index}, run_id={run_plan.get('run_id')}")
 
-    # 2) Execute one run
+    # 2) Check for duckdb
+    FIXTURES = project_root / "tests" / "fixtures"
+    tmp_db = project_root / "tests" / "_tmp_mfg.duckdb"
+    
+    # (re)create
+    if tmp_db.exists():
+        tmp_db.unlink()
+    
+    con = duckdb.connect(str(tmp_db))
+    
+    con.execute("""
+    CREATE TABLE sensor_data AS
+    SELECT * FROM read_csv_auto(?, header=true);
+    """, [str(FIXTURES / "sensor_long_min.csv")])
+    
+    con.execute("""
+    CREATE TABLE sensor_spc_limits AS
+    SELECT * FROM read_csv_auto(?, header=true);
+    """, [str(FIXTURES / "spc_limits_min.csv")])
+    
+    con.close()
+    
+    os.environ["SPC_AGENT_DUCKDB_PATH"] = str(tmp_db)
+
+    # 3) Execute one run
     run_dir = run_one_run(run_plan, project_root)
     _assert_exists(run_dir, "run_one_run returned run_dir that does not exist")
 
     print(f"✅ Run executed. run_dir={run_dir}")
 
-    # 3) Artifact checks (per job)
+    # 4) Artifact checks (per job)
     jobs = run_plan.get("jobs", [])
     if not isinstance(jobs, list) or len(jobs) == 0:
         raise AssertionError("Run must contain a non-empty 'jobs' list")

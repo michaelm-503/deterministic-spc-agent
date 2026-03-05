@@ -12,3 +12,4 @@ __pycache__/
 # Other
 .DS_Store
 /project_docs/
+tests/_tmp_mfg.duckdb

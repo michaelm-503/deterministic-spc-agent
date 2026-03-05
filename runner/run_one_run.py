@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import pandas as pd
-
+import os
 import duckdb
 
 from runner.registry import SQL_REGISTRY, PREPROCESS_REGISTRY, PLOT_REGISTRY, TABLE_REGISTRY
@@ -200,7 +200,12 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
 
     (run_dir / "run.json").write_text(json.dumps(plan, indent=2))
 
-    con = duckdb.connect(project_root / "data" / "mfg.duckdb")
+    # Conditional path for smoketest vs. actual run
+    db_path = os.environ.get("SPC_AGENT_DUCKDB_PATH")
+    if db_path is None:
+        db_path = str(project_root / "data" / "mfg.duckdb")
+    con = duckdb.connect(db_path)
+
     try:
         for idx, job in enumerate(plan["jobs"]):
             try:

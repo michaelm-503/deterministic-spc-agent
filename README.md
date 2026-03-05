@@ -140,6 +140,92 @@ The LLM acts strictly as a planner, not an analyst.
 
 ---
 
+### How to Run (30-Second Quickstart)
+
+Generate a deterministic SPC plot in under a minute. See example prompts and outputs in [Demo Gallery](docs/demo_gallery.md).
+
+1️⃣ Clone the repository
+
+```
+git clone https://github.com/michaelm-503/deterministic-spc-agent.git
+cd deterministic-spc-agent
+```
+
+2️⃣ Create the environment
+
+``` bash
+conda env create -f environment.yml
+conda activate agentic_mfg
+```
+3️⃣ Load the dataset
+
+Run the setup notebook once:
+```
+notebooks/02_data_setup.ipynb
+```
+This loads the synthetic manufacturing dataset into DuckDB.
+	
+4️⃣ Validate a plan
+
+```
+python -m spc_agent validate planner/demo_gallery.json
+```
+Validation enforces:
+- JSON schema compliance
+- SQL template allow-lists
+- Preprocess registry validation
+- Plot/table registry validation
+
+5️⃣ Run the first demo
+
+```
+python -m spc_agent run planner/demo_gallery.json --run-index 0
+```
+This command will:
+1. Execute SQL templates
+2. Apply deterministic preprocessing
+3. Generate plots and tables
+4. Write reproducible artifacts
+
+6️⃣ View outputs
+
+Each execution creates:
+```
+runs/<timestamp>/
+├── run.json
+├── job_1/
+│   ├── job.json
+│   ├── extracted_data.csv
+│   ├── processed_data.csv
+│   ├── <plot_name>.png
+│   └── <table_name>.csv
+├── job_2/
+│   └── ...
+└── hashes.json (optional)
+```
+
+You can re-run an existing execution plan directly:
+
+```
+python -m spc_agent run runs/<timestamp>/run.json
+```
+This creates a new runs/<new_timestamp>/ directory with the same artifact set and deterministic outputs (content-equivalent), based on the recorded plan.
+
+7️⃣ Optional: Replot existing runs (no SQL / no preprocess)
+
+Replot mode regenerates plots and tables from existing processed artifacts, without re-running SQL queries or preprocessing logic.
+
+```
+python -m spc_agent replot planner/demo_replot.json
+```
+
+The replot planner must reference a valid runs/<timestamp> directory containing previously generated job artifacts.
+
+This enables rapid visualization refinement without altering the original run outputs.
+
+---
+
+
 ## Architecture
 
 ```
@@ -202,67 +288,6 @@ deterministic-spc-agent/
 ├── environment.yml
 └── LICENSE
 ```
-
----
-
-### How to Run (Notebook Mode)
-
-1️⃣ Create environment
-
-```
-conda env create -f environment.yml
-conda activate agentic_mfg
-```
-
-2️⃣ Load dataset into DuckDB
-
-Run:
-```
-notebooks/02_data_setup.ipynb
-```
-This notebook:
-- Loads raw data
-- Creates the long-format sensor table
-- Computes SPC limits
-- Stores both tables in DuckDB
-	
-3️⃣ Execute pipeline
-
-Run:
-```
-notebooks/05_run_pipeline_phase_2.ipynb
-```
-This notebook:
-- Loads structured demo plans
-- Executes parameterized SQL queries
-- Applies deterministic EWMA processing
-- Generates standardized plots
-- Writes reproducible run artifacts
-	
-4️⃣ View outputs
-
-Each execution creates:
-```
-runs/<timestamp>/
-├── run.json
-├── job_1/
-│   ├── job.json
-│   ├── extracted_data.csv
-│   ├── processed_data.csv
-│   ├── <plot_name>.png
-│   └── <table_name>.csv
-├── job_2/
-│   └── ...
-└── hashes.json (optional)
-```
-
-Running reproduce.py regenerates identical outputs.
-
-All results are:
-- Deterministic
-- Parameterized
-- Version-controlled
-- Verifiable
 
 ---
 
