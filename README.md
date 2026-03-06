@@ -3,7 +3,6 @@
 A reproducible, guardrailed, agent-driven manufacturing analytics system.
 
 [![CI](https://github.com/michaelm-503/deterministic-spc-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelm-503/deterministic-spc-agent/actions/workflows/ci.yml)
-![License](https://img.shields.io/github/license/michaelm-503/deterministic-spc-agent)
 
 ---
 
