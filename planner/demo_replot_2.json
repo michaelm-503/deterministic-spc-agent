@@ -1,0 +1,21 @@
+{
+  "mode": "replot",
+  "run_dir": "runs/2026-02-26T21-25-03",
+  "jobs": [
+    {
+      "job_id": "cpr15_pressure_last7d",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "spc_time_series",
+            "plot_name": "cpr15_pressure_bad_pm_cycle_2024_01_10_12.png",
+            "params": {
+              "start_ts": "2024-01-10",
+              "end_ts": "2024-01-12"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

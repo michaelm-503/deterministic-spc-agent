@@ -1,17 +1,16 @@
 {
   "mode": "replot",
-  "run_dir": "runs/2026-02-26T21-25-03",
+  "run_dir": "runs/2026-03-05T10-06-09",
   "jobs": [
     {
-      "job_id": "cpr15_pressure_last7d",
+      "job_id": "CPR11_temperature_motor",
       "outputs": {
         "plots": [
           {
             "plot": "spc_time_series",
-            "plot_name": "cpr15_pressure_bad_pm_cycle_2024_01_10_12.png",
+            "plot_name": "cpr11_temperature_motor_spc.png",
             "params": {
-              "start_ts": "2024-01-10",
-              "end_ts": "2024-01-12"
+              "window_days": 1
             }
           }
         ]

@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # verify
     pf = sub.add_parser("verify", help="Verify artifacts from a run directory.")
-    pf.add_argument("run_dir", help="Path to run directory (runs/<timestamp>).")
+    pf.add_argument("run_dir", help="Path to base run directory (runs/<timestamp>).")
     pf.set_defaults(func=cmd_verify)
     
     return p
