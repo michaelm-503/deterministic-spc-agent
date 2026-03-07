@@ -186,11 +186,27 @@ Full architecture documentation: [`architecture.md`](docs/architecture.md)
 - Environment pinning
 
 #### Phase 4 – Agentic Front-End
-- LLM planner integration
-- Guardrail enforcement
-- Prompt interpretation layer
-- Secure execution interface
-- Tool allow-lists
+
+- Phase 4A – Prompt-to-Execution Backend
+	- LLM-ready planner integration for supported prompt patterns (demo_gallery.json)
+	- Prompt interpretation layer
+	- Schema validation and guardrail enforcement
+	- Shared orchestration function for prompt → plan → execute → verify → summarize
+	- Markdown run report generation (`run_summary.md`)
+- Phase 4B – CLI Agent Interface
+	- Thin CLI wrapper for natural language prompts
+	- End-to-end demo using supported prompts
+	- Secure execution interface built on deterministic backend
+	- Tool allow-lists
+- Phase 4C – Interactive Demo Interface
+	- Streamlit interface built on the shared orchestration backend
+
+#### Phase 5 – Workflow Expansion
+- Expanded prompt coverage and planner patterns
+- Additional analytics workflows
+- Enhanced result summarization
+- Broader manufacturing investigation support
+
 
 ---
 
