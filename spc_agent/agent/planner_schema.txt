@@ -1,0 +1,210 @@
+The system supports two plan types:
+	1.	Execution plan
+Used to run SQL, preprocessing, plots, and tables.
+	2.	Replot plan
+Used to generate new plots/tables from an existing run using stored processed artifacts. No SQL or preprocessing is rerun.
+
+Execution plans may appear either as:
+	•	a single run object
+	•	or a plan library with top-level key "runs" containing one or more run objects
+
+Valid execution plan root forms:
+
+Single run:
+{
+"run_id": "…",
+"request_text": "…",
+"jobs": [ … ]
+}
+
+Plan library:
+{
+"runs": [
+{ single run object },
+{ single run object }
+]
+}
+
+Each run must contain:
+	•	run_id : string. Brief summary of the user prompt in snake case 
+	•	request_text : string. Stores user prompt
+	•	jobs : non-empty list
+
+Each job must contain:
+	•	job_id : string. Brief summary of the intended output.
+	•	sql_template : registered SQL key
+	•	preprocess : registered preprocess key
+	•	filters : object
+	•	optional params : object
+	•	optional outputs : object
+
+Job meaning:
+	•	SQL executes once per job
+	•	preprocessing executes once per job
+	•	all plots/tables for that job reuse the same processed dataset
+
+Job structure example:
+{
+"job_id": "cnc01_vibration",
+"sql_template": "entity_sensor_history",
+"preprocess": "ewma_spc",
+"filters": {
+"entity_group": "CNC",
+"entity": "CNC01",
+"sensor": "vibration_rms",
+"start_ts": null,
+"end_ts": null
+},
+"params": {
+"ewma_alpha": 0.2
+},
+"outputs": {
+"plots": [
+{
+"plot": "spc_time_series",
+"plot_name": "cnc01_vibration.png"
+}
+],
+"tables": [
+{
+"table": "fleet_ooc_summary",
+"table_name": "summary.csv"
+}
+]
+}
+}
+
+Filters:
+	•	entity_group : string. Required for all jobs
+	•	entity : string or null. Specify for single-entity jobs. Leave null for multiple entities or fleet jobs.
+	•	sensor : string. Required for sensor-based views
+	•	start_ts : ISO datetime or null. Optional SQL-level lower bound
+	•	end_ts : ISO datetime or null. Optional SQL-level upper bound
+
+Job-level params:
+	•	ewma_alpha : optional float, default 0.2
+
+Parameter hierarchy:
+	•	job-level params affect preprocessing
+	•	output-level params affect plot/table behavior only
+	•	output params do not change preprocessing
+
+Outputs:
+	•	outputs may contain plots and/or tables
+	•	both are optional
+	•	plots/tables must use registered keys only
+
+Plot spec:
+{
+"plot": "spc_time_series",
+"plot_name": "plot.png",
+"params": { … }
+}
+
+Supported plot params:
+	•	show_raw : bool
+	•	show_ewma : bool
+	•	show_limits : bool
+	•	legend : bool
+	•	window_days : int
+	•	x_min : datetime
+	•	x_max : datetime
+	•	y_min : float
+	•	y_max : float
+	•	entities : list
+
+Plot rules:
+	•	use defaults unless override is required
+	•	window_days and entities are applied after SQL and preprocessing and before each plot call
+	•	x_min and x_max affect axis rendering only, not data slicing
+	•	some plots require entity in filters, for example spc_time_series
+
+Table spec:
+{
+"table": "fleet_ooc_summary",
+"table_name": "summary.csv",
+"params": { … }
+}
+
+Supported table params:
+	•	window_days : int
+	•	start_ts : datetime
+	•	end_ts : datetime
+	•	entities : list
+
+Table rules:
+	•	tables must write CSV artifacts
+	•	table params are applied after SQL and preprocessing and before each table call
+	•	if start_ts or end_ts is provided at table level, those bounds take precedence
+	•	otherwise use window_days if present
+	•	table-level time params affect only that table, not the job SQL filter
+
+Replot plan form:
+{
+"mode": "replot",
+"run_dir": "runs/",
+"jobs": [ … ]
+}
+
+Replot rules:
+	•	use existing processed_data.csv
+	•	do not rerun SQL
+	•	do not rerun preprocessing
+	•	new outputs are additive
+	•	outputs are written under job/replots/<timestamp>/
+
+Planner rules:
+	•	prefer minimal overrides
+	•	use defaults whenever possible
+	•	generate one job per analytic question unless multiple jobs are clearly required
+	•	prefer entity-level plots unless fleet comparison is requested
+	•	do not invent SQL templates
+	•	do not invent preprocess modules
+	•	do not invent plot types
+	•	do not invent table types
+
+Execution rules:
+	•	a plan library may contain multiple runs
+	•	a run may contain multiple jobs
+	•	filename collisions are resolved automatically
+	•	defaults are defined in code, not in the schema
+
+Registry contract:
+	•	sql_template must exist in SQL_REGISTRY
+	•	preprocess must exist in PREPROCESS_REGISTRY
+	•	plot must exist in PLOT_REGISTRY
+	•	table must exist in TABLE_REGISTRY
+
+Invalid registry keys will fail validation.
+
+Minimal valid execution plan:
+{
+"runs": [
+{
+"run_id": "example",
+"request_text": "Show vibration trend for CNC01",
+"jobs": [
+{
+"job_id": "cnc01_vibration",
+"sql_template": "entity_sensor_history",
+"preprocess": "ewma_spc",
+"filters": {
+"entity_group": "CNC",
+"entity": "CNC01",
+"sensor": "vibration_rms",
+"start_ts": null,
+"end_ts": null
+},
+"outputs": {
+"plots": [
+{
+"plot": "spc_time_series",
+"plot_name": "cnc01_vibration.png"
+}
+]
+}
+}
+]
+}
+]
+}

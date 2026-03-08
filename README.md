@@ -193,12 +193,14 @@ Full architecture documentation: [`architecture.md`](docs/architecture.md)
 	- Schema validation and guardrail enforcement
 	- Shared orchestration function for prompt → plan → execute → verify → summarize
 	- Markdown run report generation (`run_summary.md`)
-- Phase 4B – CLI Agent Interface
-	- Thin CLI wrapper for natural language prompts
-	- End-to-end demo using supported prompts
-	- Secure execution interface built on deterministic backend
-	- Tool allow-lists
+- Phase 4B – LLM implementation
+	- Enable calls to LLM API
+	- Prompt engineering for valid run-plan generation
+	- Registry allow-list injection
+	- Planner output parsing and normalization
+	- Debug artifacts for planner output (`planner_raw.txt`, `planner_plan.json`)
 - Phase 4C – Interactive Demo Interface
+	- Thin CLI wrapper for natural-language prompts
 	- Streamlit interface built on the shared orchestration backend
 
 #### Phase 5 – Workflow Expansion
