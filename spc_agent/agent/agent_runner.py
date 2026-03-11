@@ -7,6 +7,8 @@ from typing import Any
 
 from spc_agent.agent.planner import generate_plan_from_prompt
 from spc_agent.agent.report_writer import write_run_summary
+from runner.run_lookup import resolve_run_ref
+from spc_agent.agent.planner import generate_replot_plan_from_context
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,11 @@ class AgentRunResult:
     unsupported_reason: str | None = None
 
 
+def _vprint(verbose: bool, *args, **kwargs) -> None:
+    if verbose:
+        print(*args, **kwargs)
+
+
 def _resolve_single_run(plan_or_lib: dict[str, Any]) -> dict[str, Any]:
     if isinstance(plan_or_lib.get("runs"), list):
         runs = plan_or_lib["runs"]
@@ -35,6 +42,235 @@ def _resolve_single_run(plan_or_lib: dict[str, Any]) -> dict[str, Any]:
     return plan_or_lib
 
 
+def _write_planner_debug_artifacts(
+    run_dir: Path,
+    *,
+    planner_raw_output: str | None,
+    plan_to_write: dict[str, Any],
+) -> None:
+    if planner_raw_output is None:
+        return
+
+    (run_dir / "planner_raw.txt").write_text(planner_raw_output)
+    (run_dir / "planner_plan.json").write_text(json.dumps(plan_to_write, indent=2))
+
+
+def _handle_unsupported_plan(
+    *,
+    prompt: str,
+    plan_obj: dict[str, Any],
+    planner_backend: str,
+    planner_context: str,
+    planner_raw_output: str | None,
+    verbose: bool,
+) -> AgentRunResult:
+    reason = str(plan_obj.get("reason", "unsupported_request"))
+
+    _vprint(verbose, "=== unsupported request ===")
+    _vprint(verbose, f"reason: {reason}")
+    _vprint(verbose)
+
+    return AgentRunResult(
+        prompt=prompt,
+        plan=plan_obj,
+        run_dir=None,
+        run_summary_path=None,
+        verification_ok=False,
+        verification_summary="Unsupported request. No execution performed.",
+        planner_backend=planner_backend,
+        planner_context=planner_context,
+        planner_raw_output=planner_raw_output,
+        unsupported_request=True,
+        unsupported_reason=reason,
+    )
+
+
+def _handle_execution_plan(
+    *,
+    prompt: str,
+    plan_obj: dict[str, Any],
+    planner_backend: str,
+    planner_context: str,
+    planner_raw_output: str | None,
+    project_root: Path,
+    show_json: bool,
+    verbose: bool,
+) -> AgentRunResult:
+    from runner.run_one_run import run_one_run
+    from runner.validate_plan import validate_run_plan
+    from verify.verify_hashes import verify_run_hashes, format_verification_result
+
+    run_plan = _resolve_single_run(plan_obj)
+
+    _vprint(verbose, "=== resolved run plan ===")
+    _vprint(verbose, json.dumps(run_plan, indent=2))
+    _vprint(verbose)
+
+    validate_run_plan(run_plan)
+
+    _vprint(verbose, "=== validation ===")
+    _vprint(verbose, "Run plan validation passed")
+    _vprint(verbose)
+
+    run_dir = run_one_run(run_plan, project_root)
+
+    _vprint(verbose, "=== execution ===")
+    _vprint(verbose, f"run_dir: {run_dir}")
+    _vprint(verbose)
+
+    verification_result = verify_run_hashes(run_dir)
+    verification_summary = format_verification_result(verification_result)
+
+    _vprint(verbose, "=== verification ===")
+    _vprint(verbose, verification_summary)
+    _vprint(verbose)
+
+    run_summary_path = write_run_summary(
+        prompt=prompt,
+        plan=run_plan,
+        run_dir=run_dir,
+        verification_summary=verification_summary,
+        planner_source=planner_backend,
+        matched_request_text=planner_context,
+        show_json=show_json,
+    )
+
+    _vprint(verbose, "=== report ===")
+    _vprint(verbose, f"run_summary_path: {run_summary_path}")
+    _vprint(verbose)
+
+    _write_planner_debug_artifacts(
+        run_dir,
+        planner_raw_output=planner_raw_output,
+        plan_to_write=run_plan,
+    )
+
+    _vprint(verbose, "=== planner artifacts ===")
+    if planner_raw_output is not None:
+        _vprint(verbose, f"planner_raw.txt: {run_dir / 'planner_raw.txt'}")
+        _vprint(verbose, f"planner_plan.json: {run_dir / 'planner_plan.json'}")
+        _vprint(verbose)
+
+    return AgentRunResult(
+        prompt=prompt,
+        plan=run_plan,
+        run_dir=run_dir,
+        run_summary_path=run_summary_path,
+        verification_ok=verification_result.ok,
+        verification_summary=verification_summary,
+        planner_backend=planner_backend,
+        planner_context=planner_context,
+        planner_raw_output=planner_raw_output,
+        unsupported_request=False,
+        unsupported_reason=None,
+    )
+
+
+def _handle_replot_plan(
+    *,
+    prompt: str,
+    plan_obj: dict[str, Any],
+    planner_backend: str,
+    planner_context: str,
+    planner_raw_output: str | None,
+    project_root: Path,
+    planner_config: dict[str, Any] | None,
+    verbose: bool,
+) -> AgentRunResult:
+    from runner.replot_run import replot_from_plan
+    from runner.validate_plan import validate_replot_plan, PlanValidationError
+
+    _vprint(verbose, "=== resolved replot plan ===")
+    _vprint(verbose, json.dumps(plan_obj, indent=2))
+    _vprint(verbose)
+
+    # First validation attempt
+    try:
+        validate_replot_plan(plan_obj)
+        final_replot_plan = plan_obj
+        final_raw_output = planner_raw_output
+        final_planner_context = planner_context
+
+    except PlanValidationError as first_error:
+        _vprint(verbose, "=== replot validation failed; attempting second LLM call ===")
+        _vprint(verbose, str(first_error))
+        _vprint(verbose)
+
+        # Resolve prior run reference so we can append run.json context
+        run_ref = plan_obj.get("run_ref", "latest")
+        run_dir = resolve_run_ref(run_ref, project_root)
+        run_json_path = run_dir / "run.json"
+
+        if not run_json_path.exists():
+            raise FileNotFoundError(
+                f"Cannot repair replot plan because prior run.json was not found: {run_json_path}"
+            )
+
+        prior_run_json_text = run_json_path.read_text()
+
+        repair_result = generate_replot_plan_from_context(
+            user_prompt=prompt,
+            prior_run_json_text=prior_run_json_text,
+            planner_config=planner_config,
+            project_root=project_root,
+        )
+
+        _vprint(verbose, "=== replot repair raw output ===")
+        if repair_result.raw_output is not None:
+            _vprint(verbose, repair_result.raw_output)
+            _vprint(verbose)
+
+        _vprint(verbose, "=== repaired replot plan ===")
+        _vprint(verbose, json.dumps(repair_result.plan, indent=2))
+        _vprint(verbose)
+
+        # Second validation attempt
+        validate_replot_plan(repair_result.plan)
+
+        final_replot_plan = repair_result.plan
+        final_raw_output = repair_result.raw_output
+        final_planner_context = repair_result.planner_context
+
+    _vprint(verbose, "=== validation ===")
+    _vprint(verbose, "Replot plan validation passed")
+    _vprint(verbose)
+
+    replot_dirs = replot_from_plan(final_replot_plan, project_root)
+
+    _vprint(verbose, "=== replot execution ===")
+    _vprint(verbose, f"replot_dirs: {replot_dirs}")
+    _vprint(verbose)
+
+    if not replot_dirs:
+        return AgentRunResult(
+            prompt=prompt,
+            plan=final_replot_plan,
+            run_dir=None,
+            run_summary_path=None,
+            verification_ok=False,
+            verification_summary="Replot did not produce any output directories.",
+            planner_backend=planner_backend,
+            planner_context=final_planner_context,
+            planner_raw_output=final_raw_output,
+            unsupported_request=False,
+            unsupported_reason=None,
+        )
+
+    return AgentRunResult(
+        prompt=prompt,
+        plan=final_replot_plan,
+        run_dir=replot_dirs[0],
+        run_summary_path=None,
+        verification_ok=True,
+        verification_summary="Replot completed.",
+        planner_backend=planner_backend,
+        planner_context=final_planner_context,
+        planner_raw_output=final_raw_output,
+        unsupported_request=False,
+        unsupported_reason=None,
+    )
+
+
 def ask_agent(
     prompt: str,
     project_root: Path | str,
@@ -43,12 +279,19 @@ def ask_agent(
     planner_file: str = "planner/demo_gallery.json",
     planner_config: dict[str, Any] | None = None,
     show_json: bool = False,
+    verbose: bool = False,
 ) -> AgentRunResult:
-    from runner.run_one_run import run_one_run
-    from runner.validate_plan import validate_run_plan
-    from verify.verify_hashes import verify_run_hashes, format_verification_result
-
     project_root = Path(project_root)
+
+    _vprint(verbose, "=== ask_agent: prompt ===")
+    _vprint(verbose, prompt)
+    _vprint(verbose)
+
+    _vprint(verbose, "=== planner configuration ===")
+    _vprint(verbose, f"planner_backend: {planner_backend}")
+    _vprint(verbose, f"planner_file: {planner_file}")
+    _vprint(verbose, f"planner_config: {planner_config}")
+    _vprint(verbose)
 
     planner_result = generate_plan_from_prompt(
         prompt=prompt,
@@ -58,55 +301,51 @@ def ask_agent(
         planner_config=planner_config,
     )
 
+    _vprint(verbose, "=== planner result summary ===")
+    _vprint(verbose, f"planner_backend: {planner_result.planner_backend}")
+    _vprint(verbose, f"planner_context: {planner_result.planner_context}")
+    _vprint(verbose)
+
+    if planner_result.raw_output is not None:
+        _vprint(verbose, "=== planner raw output ===")
+        _vprint(verbose, planner_result.raw_output)
+        _vprint(verbose)
+
+    _vprint(verbose, "=== parsed planner plan ===")
+    _vprint(verbose, json.dumps(planner_result.plan, indent=2))
+    _vprint(verbose)
+
     plan_obj = planner_result.plan
 
     if plan_obj.get("unsupported_request") is True:
-        reason = str(plan_obj.get("reason", "unsupported_request"))
-        return AgentRunResult(
+        return _handle_unsupported_plan(
             prompt=prompt,
-            plan=plan_obj,
-            run_dir=None,
-            run_summary_path=None,
-            verification_ok=False,
-            verification_summary="Unsupported request. No execution performed.",
+            plan_obj=plan_obj,
             planner_backend=planner_result.planner_backend,
             planner_context=planner_result.planner_context,
             planner_raw_output=planner_result.raw_output,
-            unsupported_request=True,
-            unsupported_reason=reason,
+            verbose=verbose,
         )
 
-    run_plan = _resolve_single_run(plan_obj)
-    validate_run_plan(run_plan)
-    run_dir = run_one_run(run_plan, project_root)
+    if plan_obj.get("mode") == "replot":
+        return _handle_replot_plan(
+            prompt=prompt,
+            plan_obj=plan_obj,
+            planner_backend=planner_result.planner_backend,
+            planner_context=planner_result.planner_context,
+            planner_raw_output=planner_result.raw_output,
+            project_root=project_root,
+            planner_config=planner_config,
+            verbose=verbose,
+        )
 
-    verification_result = verify_run_hashes(run_dir)
-    verification_summary = format_verification_result(verification_result)
-
-    run_summary_path = write_run_summary(
+    return _handle_execution_plan(
         prompt=prompt,
-        plan=run_plan,
-        run_dir=run_dir,
-        verification_summary=verification_summary,
-        planner_source=planner_result.planner_backend,
-        matched_request_text=planner_result.planner_context,
-        show_json=show_json,
-    )
-
-    if planner_result.raw_output is not None:
-        (run_dir / "planner_raw.txt").write_text(planner_result.raw_output)
-        (run_dir / "planner_plan.json").write_text(json.dumps(run_plan, indent=2))
-
-    return AgentRunResult(
-        prompt=prompt,
-        plan=run_plan,
-        run_dir=run_dir,
-        run_summary_path=run_summary_path,
-        verification_ok=verification_result.ok,
-        verification_summary=verification_summary,
+        plan_obj=plan_obj,
         planner_backend=planner_result.planner_backend,
         planner_context=planner_result.planner_context,
         planner_raw_output=planner_result.raw_output,
-        unsupported_request=False,
-        unsupported_reason=None,
+        project_root=project_root,
+        show_json=show_json,
+        verbose=verbose,
     )

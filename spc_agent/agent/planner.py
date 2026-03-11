@@ -7,9 +7,8 @@ from typing import Any
 from runner.registry import SQL_REGISTRY, PREPROCESS_REGISTRY, PLOT_REGISTRY, TABLE_REGISTRY
 from spc_agent.agent.planner_llm import call_llm_planner
 from spc_agent.agent.planner_parser import parse_planner_output
-from spc_agent.agent.planner_prompt import build_planner_system_prompt
+from spc_agent.agent.planner_prompt import build_planner_system_prompt, build_replot_repair_prompt
 from spc_agent.agent.planner_stub import PlannerResult, generate_plan_from_prompt_stub
-
 
 def get_registry_allowlists() -> dict[str, list[str]]:
     return {
@@ -30,6 +29,37 @@ def load_planner_catalog(project_root: Path | str, *, catalog_rel: str = "planne
         )
     return json.loads(catalog_path.read_text())
 
+def generate_replot_plan_from_context(
+    *,
+    user_prompt: str,
+    prior_run_json_text: str,
+    planner_config: dict[str, Any] | None = None,
+    project_root: Path,
+) -> PlannerResult:
+    planner_config = planner_config or {}
+
+    system_prompt = build_replot_repair_prompt(
+        user_prompt=user_prompt,
+        prior_run_json=prior_run_json_text,
+        project_root=project_root,
+    )
+
+    raw_text = call_llm_planner(
+        prompt=user_prompt,
+        system_prompt=system_prompt,
+        model=str(planner_config.get("model", "gpt-4.1")),
+        temperature=float(planner_config.get("temperature", 0.0)),
+    )
+
+    plan = parse_planner_output(raw_text)
+
+    return PlannerResult(
+        prompt=user_prompt,
+        plan=plan,
+        planner_backend="llm",
+        planner_context="replot_repair_from_run_json",
+        raw_output=raw_text,
+    )
 
 def generate_plan_from_prompt(
     prompt: str,

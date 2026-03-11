@@ -46,13 +46,19 @@ def _resolve_run(plan_or_lib: dict[str, Any], run_index: int | None) -> dict[str
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    from runner.validate_plan import validate_plan_library, validate_run_plan
+    from runner.validate_plan import (
+        validate_plan_library,
+        validate_run_plan,
+        validate_replot_plan,
+    )
 
     root = _project_root(args.project_root)
     plan = _load_json(Path(args.plan_json))
 
-    # Validate plan lib vs single run
-    if _is_plan_library(plan):
+    if plan.get("mode") == "replot":
+        validate_replot_plan(plan)
+        print("✅ Replot plan validation passed")
+    elif _is_plan_library(plan):
         validate_plan_library(plan)
         print("✅ Plan library validation passed")
     else:

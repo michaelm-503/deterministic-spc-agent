@@ -204,26 +204,6 @@ Notes:
 
 ---
 
-# Replot Plans
-
-Replot plans reference a previous run.
-
-```
-{
-  "mode": "replot",
-  "run_dir": "runs/<timestamp>",
-  "jobs": [ ... ]
-}
-```
-
-Replots regenerate visual outputs using existing `processed_data.csv` artifacts.
-
-SQL execution and preprocessing are not re-run.
-
-Replots create a new artifact directory under: `job/replots/<timestamp>/`
-
----
-
 # Planner Guidelines
 
 When generating plans, the LLM should:
@@ -304,9 +284,114 @@ Invalid keys result in execution error.
 
 ---
 
+# Replot Plans
+
+Replot plans reference a previous run and regenerate visual outputs from existing processed artifacts.
+
+Replots do not rerun SQL extraction or preprocessing.
+They reuse previously generated processed_data.csv artifacts and write new outputs under:
+
+```job/replots/<timestamp>/```
+
+A replot plan may reference the prior run in one of two ways:
+
+1. **Explicit run directory**. Use `run_dir` to directly target a known run folder.
+2. **Semantic run reference**. Use `run_ref` to resolve a prior run without specifying a timestamped path.
+
+#### Explicit run_dir form:
+
+```
+{
+  "mode": "replot",
+  "run_dir": "runs/<timestamp>",
+  "jobs": [ ... ]
+}
+```
+
+#### Semantic run_ref form:
+
+```
+{
+  "mode": "replot",
+  "run_ref": "latest",
+  "jobs": [ ... ]
+}
+```
+
+`run_ref` allows the planner or user to reference prior runs without knowing the timestamped directory name.
+
+##### Supported run_ref values:
+
+1. Latest run
+
+```
+"run_ref": "latest"
+```
+
+Resolves to the most recent successful run.
+
+2. Latest run containing a specific job
+
+```
+"run_ref": {
+  "type": "latest_job_id",
+  "job_id": "arm_vibration_7d"
+}
+```
+
+#### Resolution rules
+
+When executing a replot plan:
+	1.	If `run_dir` is present, it takes precedence.
+	2.	Otherwise, if `run_ref` is present, the system resolves it to a concrete prior run directory.
+	3.	If neither `run_dir` nor `run_ref` is provided, validation fails.
+
+Resolves to the most recent run whose _metadata.job_ids contains the specified job_id.
+
+#### Replot job structure
+
+Each replot job targets an existing job_id from the referenced run and defines one or more new outputs.
+
+Example:
+```
+{
+  "mode": "replot",
+  "run_ref": "latest",
+  "jobs": [
+    {
+      "job_id": "arm_vibration_7d",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "fleet_time_trend",
+            "plot_name": "arm_vibration_7d_no_legend.png",
+            "params": {
+              "legend": false
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+#### Planner guidance for replot generation
+
+When generating replot plans, the planner should:
+- prefer `run_ref` over hardcoded timestamp paths
+- use "latest" for prompts like:
+  - “replot that”
+  - “rework the previous run”
+  - “adjust the last plot”
+- use `latest_job_id` when the prompt clearly refers to a known prior workflow or job
+- do not invent `run_dir` timestamps
+
+---
+
 # Schema Stability
 
-This schema defines the contract for v0.3.0.
+This schema defines the contract for v0.4.0.
 
 Future versions may introduce:
 - Schema validation via Pydantic

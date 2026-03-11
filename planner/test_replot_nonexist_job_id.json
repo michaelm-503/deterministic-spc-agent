@@ -1,0 +1,20 @@
+{
+  "mode": "replot",
+  "run_ref": {
+    "type": "latest_job_id",
+    "job_id": "does_not_exist"
+  },
+  "jobs": [
+    {
+      "job_id": "does_not_exist",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "fleet_time_trend",
+            "plot_name": "bad.png"
+          }
+        ]
+      }
+    }
+  ]
+}
