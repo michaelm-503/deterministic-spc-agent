@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -13,27 +12,29 @@ from spc_agent.agent.report_writer import write_run_summary
 @dataclass(frozen=True)
 class AgentRunResult:
     prompt: str
-    plan: dict[str, Any]
-    run_dir: Path
-    run_summary_path: Path
+    plan: dict[str, Any] | None
+    run_dir: Path | None
+    run_summary_path: Path | None
     verification_ok: bool
     verification_summary: str
     planner_backend: str
     planner_context: str
     planner_raw_output: str | None = None
+    unsupported_request: bool = False
+    unsupported_reason: str | None = None
+
 
 def _resolve_single_run(plan_or_lib: dict[str, Any]) -> dict[str, Any]:
     if isinstance(plan_or_lib.get("runs"), list):
         runs = plan_or_lib["runs"]
         if len(runs) != 1:
             raise ValueError(
-                f"Planner returned a plan library with {len(runs)} runs. "
-                "ask_agent() currently expects exactly one run."
+                f"Planner returned {len(runs)} runs. ask_agent() expects exactly one run."
             )
         return runs[0]
     return plan_or_lib
 
-    
+
 def ask_agent(
     prompt: str,
     project_root: Path | str,
@@ -43,7 +44,6 @@ def ask_agent(
     planner_config: dict[str, Any] | None = None,
     show_json: bool = False,
 ) -> AgentRunResult:
-
     from runner.run_one_run import run_one_run
     from runner.validate_plan import validate_run_plan
     from verify.verify_hashes import verify_run_hashes, format_verification_result
@@ -57,13 +57,27 @@ def ask_agent(
         planner_file=planner_file,
         planner_config=planner_config,
     )
-    
-    run_plan = _resolve_single_run(planner_result.plan)
 
-    print(json.dumps(planner_result.plan, indent=2))
-    
+    plan_obj = planner_result.plan
+
+    if plan_obj.get("unsupported_request") is True:
+        reason = str(plan_obj.get("reason", "unsupported_request"))
+        return AgentRunResult(
+            prompt=prompt,
+            plan=plan_obj,
+            run_dir=None,
+            run_summary_path=None,
+            verification_ok=False,
+            verification_summary="Unsupported request. No execution performed.",
+            planner_backend=planner_result.planner_backend,
+            planner_context=planner_result.planner_context,
+            planner_raw_output=planner_result.raw_output,
+            unsupported_request=True,
+            unsupported_reason=reason,
+        )
+
+    run_plan = _resolve_single_run(plan_obj)
     validate_run_plan(run_plan)
-
     run_dir = run_one_run(run_plan, project_root)
 
     verification_result = verify_run_hashes(run_dir)
@@ -93,4 +107,6 @@ def ask_agent(
         planner_backend=planner_result.planner_backend,
         planner_context=planner_result.planner_context,
         planner_raw_output=planner_result.raw_output,
+        unsupported_request=False,
+        unsupported_reason=None,
     )

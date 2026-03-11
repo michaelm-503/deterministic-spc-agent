@@ -1,18 +1,14 @@
-
 from __future__ import annotations
+
+import json
 from pathlib import Path
 from typing import Any
 
 from runner.registry import SQL_REGISTRY, PREPROCESS_REGISTRY, PLOT_REGISTRY, TABLE_REGISTRY
-
-from spc_agent.agent.planner_stub import (
-    PlannerResult,
-    generate_plan_from_prompt_stub,
-)
-
 from spc_agent.agent.planner_llm import call_llm_planner
-from spc_agent.agent.planner_prompt import build_planner_system_prompt
 from spc_agent.agent.planner_parser import parse_planner_output
+from spc_agent.agent.planner_prompt import build_planner_system_prompt
+from spc_agent.agent.planner_stub import PlannerResult, generate_plan_from_prompt_stub
 
 
 def get_registry_allowlists() -> dict[str, list[str]]:
@@ -24,6 +20,17 @@ def get_registry_allowlists() -> dict[str, list[str]]:
     }
 
 
+def load_planner_catalog(project_root: Path | str, *, catalog_rel: str = "planner/metadata/catalog.json") -> dict[str, Any]:
+    project_root = Path(project_root)
+    catalog_path = project_root / catalog_rel
+    if not catalog_path.exists():
+        raise FileNotFoundError(
+            f"Planner catalog not found: {catalog_path}. "
+            "Run setup_data.py and build_planner_catalog.py first."
+        )
+    return json.loads(catalog_path.read_text())
+
+
 def generate_plan_from_prompt(
     prompt: str,
     project_root: Path | str,
@@ -32,7 +39,6 @@ def generate_plan_from_prompt(
     planner_file: str = "planner/demo_gallery.json",
     planner_config: dict[str, Any] | None = None,
 ) -> PlannerResult:
-
     project_root = Path(project_root)
     planner_config = planner_config or {}
 
@@ -45,20 +51,20 @@ def generate_plan_from_prompt(
         )
 
     if planner_backend == "llm":
-
         allowlists = get_registry_allowlists()
+        catalog = load_planner_catalog(project_root)
 
         system_prompt = build_planner_system_prompt(
             sql_keys=allowlists["sql_templates"],
             preprocess_keys=allowlists["preprocess"],
             plot_keys=allowlists["plots"],
             table_keys=allowlists["tables"],
-            entity_group_keys=['CNC', 'PMP', 'CPR', 'ARM'],
-            entity_keys=['CNC01', 'CNC02', 'CNC03', 'CNC04', 'CNC05', 'PMP06', 'PMP07', 'PMP08', 'PMP09', 'PMP10', 'CPR11', 'CPR12', 'CPR13', 'CPR14', 'CPR15', 'ARM16', 'ARM17', 'ARM18', 'ARM19', 'ARM20'],
-            sensor_keys=['vibration_rms', 'temperature_motor', 'current_phase_avg', 'pressure_level', 'rpm', 'ambient_temp'],
-            project_root=project_root
+            entity_group_keys=catalog["entity_groups"],
+            entity_keys=catalog["entities"],
+            sensor_keys=catalog["sensors"],
+            project_root=project_root,
         )
-        
+
         raw_text = call_llm_planner(
             prompt=prompt,
             system_prompt=system_prompt,
