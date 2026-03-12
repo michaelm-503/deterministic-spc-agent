@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pandas as pd
 import streamlit as st
 
 from spc_agent.agent.agent_runner import ask_agent
@@ -55,6 +56,33 @@ def ensure_setup(project_root: Path) -> tuple[bool, str]:
 
     return True, "Setup completed successfully."
 
+def _collect_artifacts(result) -> tuple[list[Path], list[Path]]:
+    if result.run_dir is None:
+        return [], []
+
+    run_dir = Path(result.run_dir)
+
+    image_exts = {".png", ".jpg", ".jpeg", ".webp"}
+    table_exts = {".csv"}
+
+    image_paths = []
+    table_paths = []
+
+    if run_dir.is_dir():
+        for path in run_dir.rglob("*"):
+            if path.is_file():
+                if path.suffix.lower() in image_exts:
+                    image_paths.append(path)
+                elif path.suffix.lower() in table_exts:
+                    # Only render user-facing tables, not intermediate datasets
+                    name = path.name.lower()
+                    if "summary" in name or "ooc" in name:
+                        table_paths.append(path)
+
+    image_paths.sort()
+    table_paths.sort()
+    return image_paths, table_paths
+
 def _default_project_root() -> str:
     return str(Path.cwd().resolve())
 
@@ -67,9 +95,45 @@ def _read_text_if_exists(path_str: str | None):
         return path.read_text()
     return None
 
+def _render_outputs(result):
+    image_paths, table_paths = _collect_artifacts(result)
+
+    if image_paths or table_paths:
+        st.subheader("Outputs")
+
+    for image_path in image_paths:
+        st.image(str(image_path), caption=image_path.name, use_container_width=True)
+        st.caption(str(image_path))
+
+    for table_path in table_paths:
+        st.write(f"**{table_path.name}**")
+        try:
+            df = pd.read_csv(table_path)
+            st.dataframe(df, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Could not load table {table_path.name}: {e}")
+        st.caption(str(table_path))
 
 def _render_result(result):
-    st.subheader("Result")
+    # 1. Outputs first
+    _render_outputs(result)
+
+    # 2. Artifact references
+    st.subheader("Artifacts")
+
+    if result.run_dir is not None:
+        st.write("**Artifact directory**")
+        st.code(str(result.run_dir))
+
+    if result.run_summary_path is not None:
+        st.write("**Summary artifact**")
+        st.code(str(result.run_summary_path))
+
+    if result.unsupported_request:
+        st.warning(f"Unsupported request: {result.unsupported_reason}")
+
+    # 3. Diagnostics last
+    st.subheader("Diagnostics")
 
     left, right = st.columns(2)
 
@@ -83,17 +147,6 @@ def _render_result(result):
         st.write("**Verification summary**")
         st.code(result.verification_summary)
 
-        if result.unsupported_request:
-            st.warning(f"Unsupported request: {result.unsupported_reason}")
-
-        if result.run_dir is not None:
-            st.write("**Artifact directory**")
-            st.code(str(result.run_dir))
-
-        if result.run_summary_path is not None:
-            st.write("**Summary artifact**")
-            st.code(str(result.run_summary_path))
-
     with right:
         if result.plan is not None:
             with st.expander("Final plan JSON", expanded=False):
@@ -102,15 +155,6 @@ def _render_result(result):
         if result.planner_raw_output:
             with st.expander("Planner raw output", expanded=False):
                 st.code(result.planner_raw_output, language="json")
-
-    if result.run_summary_path is not None:
-        summary_text = _read_text_if_exists(str(result.run_summary_path))
-        if summary_text:
-            st.subheader("Run Summary")
-            st.markdown(summary_text)
-
-    if result.run_dir is not None and result.run_summary_path is None:
-        st.info("This result did not generate run_summary.md. Check the artifact directory above.")
 
 
 with st.sidebar:
@@ -133,12 +177,12 @@ with st.sidebar:
 
     project_root_path = Path(project_root).resolve()
     setup_ok, missing_paths = check_setup(project_root_path)
-    
+
     if setup_ok:
-        st.sidebar.success("Project artifacts ready.")
+        st.success("Project artifacts ready.")
     else:
-        st.sidebar.warning("Project artifacts missing. They will be built automatically on first run.")
-        with st.sidebar.expander("Missing artifacts"):
+        st.warning("Project artifacts missing. They will be built automatically on first run.")
+        with st.expander("Missing artifacts"):
             for p in missing_paths:
                 st.code(str(p))
 
