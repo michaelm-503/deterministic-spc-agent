@@ -102,14 +102,14 @@ def _render_outputs(result):
         st.subheader("Outputs")
 
     for image_path in image_paths:
-        st.image(str(image_path), caption=image_path.name, use_container_width=True)
+        st.image(str(image_path), caption=image_path.name, width='content')
         st.caption(str(image_path))
 
     for table_path in table_paths:
         st.write(f"**{table_path.name}**")
         try:
             df = pd.read_csv(table_path)
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(df, width='content')
         except Exception as e:
             st.warning(f"Could not load table {table_path.name}: {e}")
         st.caption(str(table_path))
