@@ -10,3 +10,4 @@ dependencies:
   - jupyter
   - pip
   - tabulate
+  - openAI
