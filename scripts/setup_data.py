@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import zipfile
 from pathlib import Path
 
 import duckdb
@@ -23,6 +24,27 @@ ENTITY_GROUP_MAP = {
 }
 
 
+def extract_raw_csv(zip_path: Path, extracted_csv_path: Path) -> Path:
+    extracted_csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if extracted_csv_path.exists():
+        return extracted_csv_path
+
+    if not zip_path.exists():
+        raise FileNotFoundError(f"Raw zip dataset not found: {zip_path}")
+
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        csv_members = [name for name in zf.namelist() if name.endswith(".csv")]
+        if len(csv_members) == 0:
+            raise FileNotFoundError(f"No CSV found inside zip: {zip_path}")
+
+        member_name = csv_members[0]
+        with zf.open(member_name) as src, extracted_csv_path.open("wb") as dst:
+            dst.write(src.read())
+
+    return extracted_csv_path
+
+
 def load_raw_dataset(raw_csv_path: Path) -> pd.DataFrame:
     df = pd.read_csv(raw_csv_path)
     df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -33,6 +55,7 @@ def load_raw_dataset(raw_csv_path: Path) -> pd.DataFrame:
 
 def build_long_sensor_table(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values("timestamp")
+
     df_long = df.melt(
         id_vars=[
             "timestamp",
@@ -48,6 +71,7 @@ def build_long_sensor_table(df: pd.DataFrame) -> pd.DataFrame:
         var_name="sensor",
         value_name="value",
     )
+
     return df_long.dropna(subset=["value"])
 
 
@@ -94,12 +118,14 @@ def write_duckdb(sensor_data_csv: Path, chart_limits_csv: Path, duckdb_path: Pat
 def setup_data(
     project_root: Path,
     *,
-    raw_csv_rel: str = "data/raw/predictive_maintenance_v3.csv",
+    raw_zip_rel: str = "data/raw/predictive_maintenance_v3.csv.zip",
+    extracted_csv_rel: str = "data/processed/predictive_maintenance_v3.csv",
     processed_sensor_rel: str = "data/processed/predictive_maintenance.csv",
     processed_limits_rel: str = "data/processed/chart_limits.csv",
     duckdb_rel: str = "data/mfg.duckdb",
 ) -> None:
-    raw_csv_path = project_root / raw_csv_rel
+    raw_zip_path = project_root / raw_zip_rel
+    extracted_csv_path = project_root / extracted_csv_rel
     sensor_csv_path = project_root / processed_sensor_rel
     limits_csv_path = project_root / processed_limits_rel
     duckdb_path = project_root / duckdb_rel
@@ -107,19 +133,23 @@ def setup_data(
     sensor_csv_path.parent.mkdir(parents=True, exist_ok=True)
     limits_csv_path.parent.mkdir(parents=True, exist_ok=True)
 
+    raw_csv_path = extract_raw_csv(raw_zip_path, extracted_csv_path)
+
     df = load_raw_dataset(raw_csv_path)
     df_long = build_long_sensor_table(df)
     spc_limits = build_spc_limits(df_long)
 
     df_long.to_csv(sensor_csv_path, index=False)
     spc_limits.to_csv(limits_csv_path, index=False)
+
     write_duckdb(sensor_csv_path, limits_csv_path, duckdb_path)
 
     print("Setup complete:")
-    print(f"  Raw input:    {raw_csv_path}")
-    print(f"  Sensor CSV:   {sensor_csv_path}")
-    print(f"  Limits CSV:   {limits_csv_path}")
-    print(f"  DuckDB:       {duckdb_path}")
+    print(f"  Raw zip:       {raw_zip_path}")
+    print(f"  Extracted CSV: {raw_csv_path}")
+    print(f"  Sensor CSV:    {sensor_csv_path}")
+    print(f"  Limits CSV:    {limits_csv_path}")
+    print(f"  DuckDB:        {duckdb_path}")
 
 
 def main() -> None:

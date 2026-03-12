@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import streamlit as st
 
@@ -18,6 +20,40 @@ st.set_page_config(
 st.title("Deterministic SPC Agent")
 st.caption("Natural-language wrapper for prompt → plan → execute / replot → verify → summarize")
 
+def check_setup(project_root: Path) -> tuple[bool, list[Path]]:
+    required = [
+        project_root / "data" / "mfg.duckdb",
+        project_root / "planner" / "metadata" / "catalog.json",
+    ]
+    missing = [p for p in required if not p.exists()]
+    return (len(missing) == 0, missing)
+
+
+def ensure_setup(project_root: Path) -> tuple[bool, str]:
+    ok, missing = check_setup(project_root)
+    if ok:
+        return True, "Setup already complete."
+
+    try:
+        subprocess.run(
+            [sys.executable, "scripts/setup_data.py", "--project-root", str(project_root)],
+            check=True,
+            cwd=str(project_root),
+        )
+        subprocess.run(
+            [sys.executable, "scripts/build_planner_catalog.py", "--project-root", str(project_root)],
+            check=True,
+            cwd=str(project_root),
+        )
+    except subprocess.CalledProcessError as e:
+        return False, f"Setup failed while running scripts: {e}"
+
+    ok, missing = check_setup(project_root)
+    if not ok:
+        missing_str = ", ".join(str(p) for p in missing)
+        return False, f"Setup completed but required artifacts are still missing: {missing_str}"
+
+    return True, "Setup completed successfully."
 
 def _default_project_root() -> str:
     return str(Path.cwd().resolve())
@@ -95,6 +131,17 @@ with st.sidebar:
         "- CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?"
     )
 
+    project_root_path = Path(project_root).resolve()
+    setup_ok, missing_paths = check_setup(project_root_path)
+    
+    if setup_ok:
+        st.sidebar.success("Project artifacts ready.")
+    else:
+        st.sidebar.warning("Project artifacts missing. They will be built automatically on first run.")
+        with st.sidebar.expander("Missing artifacts"):
+            for p in missing_paths:
+                st.code(str(p))
+
 prompt = st.text_area(
     "Prompt",
     height=140,
@@ -110,6 +157,13 @@ if run_clicked:
     if not prompt.strip():
         st.error("Enter a prompt first.")
     else:
+        project_root_path = Path(project_root).resolve()
+
+        setup_ok, setup_msg = ensure_setup(project_root_path)
+        if not setup_ok:
+            st.error(setup_msg)
+            st.stop()
+
         planner_config = {
             "model": model_name,
             "temperature": float(temperature),
@@ -119,7 +173,7 @@ if run_clicked:
             with st.spinner("Running agent..."):
                 result = ask_agent(
                     prompt=prompt.strip(),
-                    project_root=Path(project_root),
+                    project_root=project_root_path,
                     planner_backend=planner_backend,
                     planner_file=planner_file,
                     planner_config=planner_config,
