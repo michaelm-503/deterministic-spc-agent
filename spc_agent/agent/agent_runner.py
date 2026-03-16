@@ -7,7 +7,7 @@ from typing import Any
 
 from spc_agent.agent.planner import generate_plan_from_prompt
 from spc_agent.agent.report_writer import write_run_summary
-from runner.run_lookup import resolve_run_ref
+from runner.run_lookup import resolve_run_ref, RunResolutionError
 from spc_agent.agent.planner import generate_replot_plan_from_context
 
 
@@ -198,7 +198,13 @@ def _handle_replot_plan(
 
         # Resolve prior run reference so we can append run.json context
         run_ref = plan_obj.get("run_ref", "latest")
-        run_dir = resolve_run_ref(run_ref, project_root)
+
+        try:
+            run_dir = resolve_run_ref(run_ref, project_root)
+        except RunResolutionError as e:
+            print(f"❌ Replot aborted: {e}")
+
+        
         run_json_path = run_dir / "run.json"
 
         if not run_json_path.exists():

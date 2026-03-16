@@ -1,32 +1,16 @@
 # Deterministic SPC Agent
 
-A reproducible, guardrailed, agent-driven manufacturing analytics system.
+A guardrailed AI system that converts natural-language requests into **deterministic manufacturing analytics workflows**.
+
+Instead of allowing an LLM to generate executable code, the system uses the LLM only as a **planner** that produces structured execution plans. Those plans are validated and executed by a deterministic analytics engine.
+
+This architecture demonstrates how AI can safely support engineering analysis while preserving **reproducibility, auditability, and deterministic execution**.
+
 
 [![CI](https://github.com/michaelm-503/deterministic-spc-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelm-503/deterministic-spc-agent/actions/workflows/ci.yml)
-
----
-
-## Overview
-
-Large manufacturing facilities may contain thousands of equipment fleets, each with hundreds of sensors or other health indicators. The breadth of possible plots and the need for timely analysis limits the usefulness of static dashboards for sustaining engineering activities. Engineers frequently rely on hand-edited SQL filters and ad hoc plotting workflows, which are difficult to standardize and reproduce, as well as time consuming.
-
-**Deterministic SPC Agent** augments and replaces ad hoc plotting workflows with a constrained, reproducible execution pipeline.
-
-Instead of allowing AI models to generate analysis code or write SQL, this system:
-
-- Uses an LLM only to generate a structured plan (JSON)
-- Executes only approved SQL templates
-- Applies deterministic preprocessing logic
-- Generates standardized SPC visualizations
-- Exports fully reproducible run artifacts
-- Supports plot rework without re-running SQL or preprocessing
-- Verifies outputs via schema validation and hashing
-
-**Deterministic SPC Agent** demonstrates how LLMs can safely orchestrate manufacturing analytics without generating SQL, Python, or statistical logic.
-
-All analytics are executed through a guardrailed, registry-driven execution engine with deterministic outputs and full run traceability.
-
-Public predictive manufacturing data from the [Industrial Machine Predictive Maintenance Dataset](https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance) was used for this repository.
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![Architecture](https://img.shields.io/badge/architecture-deterministic--AI-green)
+![License](https://img.shields.io/badge/license-MIT-orange)
 
 ---
 
@@ -42,9 +26,41 @@ Detailed documentation is available in the `docs/` directory:
 
 ---
 
-# Example Output
+# Why Does This Exist?
 
-**User prompt:**
+Large manufacturing facilities may contain **thousands of equipment fleets**, each with **hundreds of sensors or health indicators**. Engineers rely on **Statistical Process Control (SPC)** and time-series analysis to detect:
+
+- equipment degradation  
+- abnormal process behavior  
+- emerging failures  
+
+However, the workflow today is often slow and manual. Engineers frequently rely on hand-edited SQL filters and ad hoc plotting workflows to investigate issues. These workflows can be:
+
+- difficult to standardize  
+- hard to reproduce  
+- time-consuming during active investigations  
+
+AI systems promise to accelerate this process, but naïve approaches that allow LLMs to generate code introduce serious risks:
+
+- non-reproducible analysis  
+- unsafe tool execution  
+- unpredictable system behavior  
+- lack of auditability  
+
+**Deterministic SPC Agent** demonstrates a safer architecture for AI-assisted engineering analysis.
+
+---
+
+# Demo
+
+
+A full version of **Determininstic SPC Agent** is available on StreamLit:
+
+[https://deterministic-spc-agent.streamlit.app/](https://deterministic-spc-agent.streamlit.app/).
+
+The demo allows users to submit natural-language prompts and observe the generated execution plans and analytics artifacts.
+
+**Example prompt:**
 
 >CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is it doing now?
 
@@ -85,133 +101,177 @@ Detailed documentation is available in the `docs/` directory:
 
 **Workflow output:**
 - Two SPC plots
-- Processed datasets
-- run.json
+- Processed datasets 
+- `run.json` execution plan  
 - Hash verification output
 
 ![Image](assets/CPR11_demo.png)
 
-#### Selected additional examples:
+---
 
-- [The ARM technician will be out next week. Are any vibration PMs coming up?](docs/demo_gallery.md#the-arm-technician-will-be-out-next-week-are-any-vibration-pms-coming-up)
+# Replot Workflow
 
-- [PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).](docs/demo_gallery.md#pmp09-had-tempcurrentrpm-issues-on-jan-12-show-temp-trend-last-3-days-and-an-ooc-summary-table-last-3-days-temp)
+Users can modify previous analyses without rerunning the full pipeline.
 
-- [CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and
-    pressure.](#cpr15-had-vibration-on-jan-9-and-pressure-instability-on-jan-11-show-last-7-days-for-vibration-and-pressure)
+Prompt:
 
-- [Replot pressure for just the bad PM cycle. 1/10-1/12.](docs/demo_gallery.md#replot-pressure-for-just-the-bad-pm-cycle-110-112)
+> Remove the legend from the last plot. Add a boxplot for the last 3 days and an OOC summary.
 
-- View more examples in the [Demo Gallery](docs/demo_gallery.md)
+The system:
 
+1. Resolves the most recent run
+2. Reuses existing processed data
+3. Regenerates new outputs
 
-# Quickstart
+This allows interactive analysis while preserving reproducibility.
 
-Clone repository:
+---
+
+# Key Idea: Deterministic AI
+
+Instead of generating code, the LLM produces **structured execution plans**.
+
+The system then:
+
+1. validates the plan against a schema  
+2. restricts execution to approved analytics modules  
+3. executes deterministic workflows  
+4. records reproducible artifacts  
+
+This design combines:
+
+- **AI usability**
+- **engineering reliability**
+
+Importantly, the LLM is responsible only for **interpreting the request**.
+
+Execution itself is deterministic.
+
+Rerunning the same request — even if phrased slightly differently — resolves to the same structured execution plan and deterministic workflow. This ensures reproducibility and builds trust in engineering analysis.
+
+---
+
+# Example Workflow
+
+Prompt:
+
+> Plot 7 days of vibration data for ARM tools.
+
+Execution pipeline:
 
 ```
-git clone https://github.com/michaelm-503/deterministic-spc-agent.git
-cd deterministic-spc-agent
+Prompt
+→ LLM planner
+→ schema validation
+→ deterministic execution
+→ artifact generation
+→ report summarization
 ```
 
-Create environment:
+Each run produces a reproducible artifact directory containing:
 
-```
-conda env create -f environment.yml
-conda activate agentic_mfg
-```
-
-Load dataset:
-
-```
-notebooks/02_data_setup.ipynb
-```
-
-Validate plan:
-
-```
-python -m spc_agent validate planner/demo_gallery.json
-```
-
-Run demo:
-
-```
-python -m spc_agent run planner/demo_gallery.json --run-index 0
-```
+- execution plan  
+- extracted data  
+- processed datasets  
+- generated plots  
+- summary tables  
+- verification hashes  
 
 ---
 
 # Architecture
 
-```
-User Question
-      ↓
-LLM Planner: converts request to structured JSON
-      ↓
-Schema Validation
-      ↓
-SQL Execution from Template
-      ↓
-Deterministic Preprocessing
-      ↓
-Plot/Table Generation
-      ↓
-Run Artifacts + Hashing + Verification
-      ↓↑
-Replot (visual-only adjustments)
+```mermaid
+flowchart TD
+
+A[User Question]
+
+B[LLM Planner<br/>Converts request to structured JSON]
+
+C[Schema Validation]
+
+D[SQL Execution<br/>from Template]
+
+E[Deterministic<br/>Preprocessing]
+
+F[Plot / Table Generation]
+
+G[Run Artifacts<br/>Hashing + Verification]
+
+H[Replot<br/>Visual-only adjustments]
+
+A --> B
+B --> C
+C --> D
+D --> E
+E --> F
+F --> G
+G --> H
+H --> G
 ```
 
-Full architecture documentation: [`architecture.md`](docs/architecture.md)
+Full architecture documentation:  
+[`docs/architecture.md`](docs/architecture.md)
 
 ---
 
-# Roadmap
+# Running Locally
 
-#### Phase 1 - Proof of Concept Workflow ✅
-- Structured data model
-- Deterministic preprocessing
-- Guardrailed execution
+Create the environment:
 
-#### Phase 2 – An Execution Framework ✅
-- Single-tool and fleet-level analytics workflows
-- Plot-level parameter overrides and slicing
-- Replot (visual-only rework) mode
-- SQL template registry with parameter signatures
-- JSON schema validation framework
+```bash
+conda env create -f environment.yml
+conda activate agentic_mfg
+```
 
-#### Phase 3 – Production Hardening ✅
-- CLI runner
-- CI integration
-- Automated artifact validation
-- Environment pinning
+Launch the Streamlit interface:
 
-#### Phase 4 – Agentic Front-End
+```bash
+streamlit run streamlit_app.py
+```
 
-- Phase 4A – Prompt-to-Execution Backend
-	- LLM-ready planner integration for supported prompt patterns (demo_gallery.json)
-	- Prompt interpretation layer
-	- Schema validation and guardrail enforcement
-	- Shared orchestration function for prompt → plan → execute → verify → summarize
-	- Markdown run report generation (`run_summary.md`)
-- Phase 4B – LLM implementation
-	- Enable calls to LLM API
-	- Prompt engineering for valid run-plan generation
-	- Registry allow-list injection
-	- Planner output parsing and normalization
-	- Debug artifacts for planner output (`planner_raw.txt`, `planner_plan.json`)
-- Phase 4C – Interactive Demo Interface
-	- Thin CLI wrapper for natural-language prompts
-	- Streamlit interface built on the shared orchestration backend
+Example prompt:
 
-#### Phase 5 – Workflow Expansion
-- Expanded prompt coverage and planner patterns
-- Additional analytics workflows
-- Enhanced result summarization
-- Broader manufacturing investigation support
+```
+Plot 7 days of vibration data for ARM tools.
+```
 
+---
+
+# Repository Structure
+
+```
+spc_agent/
+    agent/          # LLM planning + orchestration
+runner/             # deterministic execution engine
+plots/              # visualization modules
+tables/             # summary outputs
+preprocess/         # SPC preprocessing
+sql/                # query templates
+
+scripts/            # setup pipeline
+
+streamlit_app.py
+```
 
 ---
 
 # License
 
 MIT License
+
+Dataset included from:
+
+Industrial Machine Predictive Maintenance (syn)  
+Author: Tatheer Abbas  
+License: CC0 Public Domain  
+
+https://www.kaggle.com/datasets/tatheerabbas/industrial-machine-predictive-maintenance
+
+---
+
+# Author
+
+[Michael C. Moore](https://michaelm-503.github.io)
+
+---

@@ -62,7 +62,8 @@ def validate_job(job: dict, path: str = "job") -> None:
 
     if len(plots) + len(tables) == 0:
         raise PlanValidationError(
-            f"{path} must declare at least one visible output artifact in outputs.plots or outputs.tables."
+            f"{path} must declare at least one visible output artifact "
+            f"in outputs.plots or outputs.tables."
         )
 
     for j, plot_spec in enumerate(plots):
@@ -116,7 +117,7 @@ def validate_replot_plan(plan: dict) -> None:
     has_run_ref = "run_ref" in plan
 
     if not has_run_dir and not has_run_ref:
-        raise PlanValidationError("Replot plan must include 'run_dir' or 'run_ref'.")
+        raise PlanValidationError("Replot plan must include one of: 'run_dir' or 'run_ref'.")
 
     if has_run_ref:
         validate_run_ref(plan["run_ref"], path="replot_plan.run_ref")
@@ -159,13 +160,21 @@ def validate_replot_job(job: dict, path: str = "replot_job") -> None:
     _require(job, "job_id", path)
     _require_type(job["job_id"], str, f"{path}.job_id")
 
-    outputs = job.get("outputs", {})
+    # Replot must not include execution-stage fields
+    forbidden = ["sql_template", "preprocess", "filters", "params"]
+    for key in forbidden:
+        if key in job:
+            raise PlanValidationError(
+                f"{path} must not include '{key}' in replot mode."
+            )
+
+    outputs = job.get("outputs", {}) or {}
     _require_type(outputs, dict, f"{path}.outputs")
 
     plots = outputs.get("plots", []) or []
-    tables = outputs.get("tables", []) or []
-
     _require_type(plots, list, f"{path}.outputs.plots")
+
+    tables = outputs.get("tables", []) or []
     _require_type(tables, list, f"{path}.outputs.tables")
 
     if len(plots) + len(tables) == 0:

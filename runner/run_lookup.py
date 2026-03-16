@@ -5,10 +5,14 @@ from pathlib import Path
 from typing import Any
 
 
+class RunResolutionError(RuntimeError):
+    """Raised when a semantic run reference cannot be resolved."""
+
+
 def _load_run_json(run_dir: Path) -> dict[str, Any]:
     run_json_path = run_dir / "run.json"
     if not run_json_path.exists():
-        raise FileNotFoundError(f"run.json not found in run directory: {run_dir}")
+        raise RunResolutionError(f"run.json not found in run directory: {run_dir}")
     return json.loads(run_json_path.read_text())
 
 
@@ -18,7 +22,7 @@ def _list_run_dirs(project_root: Path) -> list[Path]:
         return []
 
     run_dirs = [p for p in runs_root.iterdir() if p.is_dir()]
-    run_dirs.sort(key=lambda p: p.name, reverse=True)  # newest timestamp first
+    run_dirs.sort(key=lambda p: p.name, reverse=True)
     return run_dirs
 
 
@@ -32,7 +36,7 @@ def resolve_run_ref(run_ref: str | dict[str, Any], project_root: Path) -> Path:
     """
     run_dirs = _list_run_dirs(project_root)
     if not run_dirs:
-        raise FileNotFoundError(
+        raise RunResolutionError(
             f"No prior runs found under: {project_root / 'runs'}"
         )
 
@@ -45,7 +49,9 @@ def resolve_run_ref(run_ref: str | dict[str, Any], project_root: Path) -> Path:
         if ref_type == "latest_job_id":
             job_id = run_ref.get("job_id")
             if not job_id:
-                raise ValueError("run_ref.type='latest_job_id' requires key 'job_id'.")
+                raise RunResolutionError(
+                    "run_ref.type='latest_job_id' requires key 'job_id'."
+                )
 
             for run_dir in run_dirs:
                 run_json = _load_run_json(run_dir)
@@ -54,11 +60,16 @@ def resolve_run_ref(run_ref: str | dict[str, Any], project_root: Path) -> Path:
                 if job_id in job_ids:
                     return run_dir
 
-            raise FileNotFoundError(
+            raise RunResolutionError(
                 f"No prior run found containing job_id='{job_id}'."
             )
 
-    raise ValueError(
+        raise RunResolutionError(
+            f"Unsupported run_ref.type='{ref_type}'. "
+            "Supported types: 'latest_job_id'."
+        )
+
+    raise RunResolutionError(
         "Unsupported run_ref. Expected 'latest' or "
         "{'type': 'latest_job_id', 'job_id': '<job_id>'}."
     )

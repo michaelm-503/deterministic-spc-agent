@@ -33,7 +33,7 @@ import pandas as pd
 
 from runner.registry import PLOT_REGISTRY, TABLE_REGISTRY
 from verify.compute_hashes import compute_run_hashes, write_hash_manifest
-from runner.run_lookup import resolve_run_ref
+from runner.run_lookup import resolve_run_ref, RunResolutionError
 
 def _apply_optional_time_slice(df: pd.DataFrame, params: dict | None) -> pd.DataFrame:
     """
@@ -432,7 +432,10 @@ def replot_from_plan(plan: dict, project_root: Path | str, *, override_run_dir: 
     
     try:
         run_dir = _resolve_run_dir(plan, project_root, override_run_dir)
-    except (FileNotFoundError, RuntimeError, ValueError) as e:
+    except RunResolutionError as e:
+        print(f"❌ Replot aborted: {e}")
+        return []
+    except ValueError as e:
         print(f"❌ Replot aborted: {e}")
         return []
     
