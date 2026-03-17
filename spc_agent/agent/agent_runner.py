@@ -8,7 +8,7 @@ from typing import Any
 from spc_agent.agent.planner import generate_plan_from_prompt
 from spc_agent.agent.report_writer import write_run_summary
 from runner.run_lookup import resolve_run_ref, RunResolutionError
-from spc_agent.agent.planner import generate_replot_plan_from_context
+from spc_agent.agent.planner import generate_plan_from_context
 
 
 @dataclass(frozen=True)
@@ -24,12 +24,34 @@ class AgentRunResult:
     planner_raw_output: str | None = None
     unsupported_request: bool = False
     unsupported_reason: str | None = None
+    recovery_used: bool = False
+    recovery_details: dict[str, Any] | None = None
 
 
 def _vprint(verbose: bool, *args, **kwargs) -> None:
     if verbose:
         print(*args, **kwargs)
 
+def _is_recovery_sentinel(plan_obj: dict[str, Any]) -> bool:
+    return (
+        plan_obj.get("mode") == "replot"
+        and plan_obj.get("run_ref") == "latest"
+        and "jobs" not in plan_obj
+    )
+
+def _load_latest_run_context(project_root: Path) -> tuple[Path, str]:
+    run_dir = resolve_run_ref("latest", project_root)
+    run_json_path = run_dir / "run.json"
+    if not run_json_path.exists():
+        raise FileNotFoundError(f"Previous run.json not found: {run_json_path}")
+    return run_dir, run_json_path.read_text()
+
+def _select_prior_job_json(run_dir: Path) -> str | None:
+    run_json = json.loads((run_dir / "run.json").read_text())
+    jobs = run_json.get("jobs", []) or []
+    if len(jobs) == 1:
+        return json.dumps(jobs[0], indent=2)
+    return None
 
 def _resolve_single_run(plan_or_lib: dict[str, Any]) -> dict[str, Any]:
     if isinstance(plan_or_lib.get("runs"), list):
@@ -62,6 +84,8 @@ def _handle_unsupported_plan(
     planner_backend: str,
     planner_context: str,
     planner_raw_output: str | None,
+    recovery_used: bool = False,
+    recovery_details: dict[str, Any] | None = None,
     verbose: bool,
 ) -> AgentRunResult:
     reason = str(plan_obj.get("reason", "unsupported_request"))
@@ -82,6 +106,8 @@ def _handle_unsupported_plan(
         planner_raw_output=planner_raw_output,
         unsupported_request=True,
         unsupported_reason=reason,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
     )
 
 
@@ -94,6 +120,8 @@ def _handle_execution_plan(
     planner_raw_output: str | None,
     project_root: Path,
     show_json: bool,
+    recovery_used: bool = False,
+    recovery_details: dict[str, Any] | None = None,
     verbose: bool,
 ) -> AgentRunResult:
     from runner.run_one_run import run_one_run
@@ -132,6 +160,8 @@ def _handle_execution_plan(
         verification_summary=verification_summary,
         planner_source=planner_backend,
         matched_request_text=planner_context,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
         show_json=show_json,
     )
 
@@ -163,6 +193,8 @@ def _handle_execution_plan(
         planner_raw_output=planner_raw_output,
         unsupported_request=False,
         unsupported_reason=None,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
     )
 
 
@@ -175,6 +207,8 @@ def _handle_replot_plan(
     planner_raw_output: str | None,
     project_root: Path,
     planner_config: dict[str, Any] | None,
+    recovery_used: bool = False,
+    recovery_details: dict[str, Any] | None = None,
     verbose: bool,
 ) -> AgentRunResult:
     from runner.replot_run import replot_from_plan
@@ -214,7 +248,7 @@ def _handle_replot_plan(
 
         prior_run_json_text = run_json_path.read_text()
 
-        repair_result = generate_replot_plan_from_context(
+        repair_result = generate_plan_from_context(
             user_prompt=prompt,
             prior_run_json_text=prior_run_json_text,
             planner_config=planner_config,
@@ -260,6 +294,8 @@ def _handle_replot_plan(
             planner_raw_output=final_raw_output,
             unsupported_request=False,
             unsupported_reason=None,
+            recovery_used=recovery_used,
+            recovery_details=recovery_details,
         )
 
     return AgentRunResult(
@@ -274,6 +310,8 @@ def _handle_replot_plan(
         planner_raw_output=final_raw_output,
         unsupported_request=False,
         unsupported_reason=None,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
     )
 
 
@@ -323,6 +361,54 @@ def ask_agent(
 
     plan_obj = planner_result.plan
 
+    recovery_used = False
+    recovery_details = None
+
+    if _is_recovery_sentinel(plan_obj):
+        recovery_used = True
+
+        _vprint(verbose, "=== recovery sentinel detected ===")
+        _vprint(verbose, "Planner requested previous-run context for a second planning pass.")
+        _vprint(verbose)
+
+        try:
+            recovered_run_dir, prior_run_json_text = _load_latest_run_context(project_root)
+            prior_job_json_text = _select_prior_job_json(recovered_run_dir)
+        except RunResolutionError as e:
+            raise RuntimeError(f"Recovery failed while resolving prior run context: {e}") from e
+
+        recovery_details = {
+            "initial_plan": plan_obj,
+            "recovered_run_dir": str(recovered_run_dir),
+            "prior_job_context_used": prior_job_json_text is not None,
+        }
+        
+        _vprint(verbose, "=== recovery traceability ===")
+        _vprint(verbose, f"recovery_used: {recovery_used}")
+        if recovery_details is not None:
+            _vprint(verbose, json.dumps(recovery_details, indent=2))
+        _vprint(verbose)
+
+        recovery_result = generate_plan_from_context(
+            user_prompt=prompt,
+            project_root=project_root,
+            prior_run_json_text=prior_run_json_text,
+            prior_job_json_text=prior_job_json_text,
+            planner_config=planner_config,
+        )
+
+        _vprint(verbose, "=== recovery planner raw output ===")
+        if recovery_result.raw_output is not None:
+            _vprint(verbose, recovery_result.raw_output)
+            _vprint(verbose)
+
+        _vprint(verbose, "=== recovered planner plan ===")
+        _vprint(verbose, json.dumps(recovery_result.plan, indent=2))
+        _vprint(verbose)
+
+        planner_result = recovery_result
+        plan_obj = planner_result.plan
+
     if plan_obj.get("unsupported_request") is True:
         return _handle_unsupported_plan(
             prompt=prompt,
@@ -330,6 +416,8 @@ def ask_agent(
             planner_backend=planner_result.planner_backend,
             planner_context=planner_result.planner_context,
             planner_raw_output=planner_result.raw_output,
+            recovery_used=recovery_used,
+            recovery_details=recovery_details,
             verbose=verbose,
         )
 
@@ -342,6 +430,8 @@ def ask_agent(
             planner_raw_output=planner_result.raw_output,
             project_root=project_root,
             planner_config=planner_config,
+            recovery_used=recovery_used,
+            recovery_details=recovery_details,
             verbose=verbose,
         )
 
@@ -353,5 +443,7 @@ def ask_agent(
         planner_raw_output=planner_result.raw_output,
         project_root=project_root,
         show_json=show_json,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
         verbose=verbose,
     )

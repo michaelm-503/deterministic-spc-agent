@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 import pandas as pd
 
@@ -75,6 +75,8 @@ def build_run_summary_markdown(
     verification_summary: str,
     planner_source: str | None = None,
     matched_request_text: str | None = None,
+    recovery_used: bool = False,
+    recovery_details: dict[str, Any] | None = None,
     show_json: bool = False,
 ) -> str:
     run_dir = Path(run_dir)
@@ -103,6 +105,14 @@ def build_run_summary_markdown(
         lines.append(f"`{planner_source}`")
         lines.append("")
 
+    if recovery_used:
+        lines.append("## Recovery")
+        lines.append("")
+        lines.append("A second planning pass was required using context from the previous run.")
+        if recovery_details and recovery_details.get("recovered_run_dir"):
+            lines.append(f"- Prior run used for recovery: `{recovery_details['recovered_run_dir']}`")
+        lines.append("")
+    
     lines.append("## Run Directory")
     lines.append("")
     lines.append(f"`{run_dir}`")
@@ -168,6 +178,8 @@ def write_run_summary(
     planner_source: str | None = None,
     matched_request_text: str | None = None,
     filename: str = "run_summary.md",
+    recovery_used: bool = False,
+    recovery_details: dict[str, Any] | None = None,
     show_json: bool = False,
 ) -> Path:
     run_dir = Path(run_dir)
@@ -178,6 +190,8 @@ def write_run_summary(
         verification_summary=verification_summary,
         planner_source=planner_source,
         matched_request_text=matched_request_text,
+        recovery_used=recovery_used,
+        recovery_details=recovery_details,
         show_json=show_json,
     )
     out_path = run_dir / filename
