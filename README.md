@@ -21,6 +21,7 @@ Detailed documentation is available in the `docs/` directory:
 - [`architecture.md`](docs/architecture.md)
 - [`cli.md`](docs/cli.md)
 - [`demo_gallery.md`](docs/demo_gallery.md)
+- [`developer_guide.md`](docs/developer_guide.md)
 - [`planner_schema.md`](docs/planner_schema.md)
 - [`verification.md`](docs/verification.md)
 
