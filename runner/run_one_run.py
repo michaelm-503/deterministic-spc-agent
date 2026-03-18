@@ -191,7 +191,12 @@ def execute_job(con, project_root: Path, run_dir: Path, job: dict, run_id: str |
 
     return {"plots": plot_paths, "tables": table_paths}
 
-def run_one_run(plan: dict, project_root: Path) -> Path:
+def run_one_run(
+    plan: dict,
+    project_root: Path,
+    *,
+    write_hashes: bool = False,
+) -> Path:
     # Schema Validation
     validate_run_plan(plan)
 
@@ -253,6 +258,10 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
                 ) from e
     finally:
         con.close()
+
+    if write_hashes:
+        hashes = compute_run_hashes(run_dir)
+        write_hash_manifest(run_dir, hashes)
 
     return run_dir
 

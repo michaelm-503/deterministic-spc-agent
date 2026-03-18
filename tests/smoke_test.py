@@ -96,9 +96,10 @@ def main():
     os.environ["SPC_AGENT_DUCKDB_PATH"] = str(tmp_db)
 
     # 3) Execute one run
-    run_dir = run_one_run(run_plan, project_root)
+    run_dir = run_one_run(run_plan, project_root, write_hashes=True)
     _assert_exists(run_dir, "run_one_run returned run_dir that does not exist")
-
+    _assert_exists(run_dir / "hashes.json", "Missing hashes.json")
+    
     print(f"✅ Run executed. run_dir={run_dir}")
 
     # 4) Artifact checks (per job)
