@@ -1,7 +1,7 @@
-pandas
-numpy
-duckdb
-matplotlib
-tabulate
-streamlit
-openai
+pandas>=2.2
+numpy>=1.26
+duckdb>=1.1
+matplotlib>=3.8
+tabulate>=0.9
+streamlit>=1.40
+openai>=1.0
