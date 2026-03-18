@@ -71,7 +71,7 @@ def _best_run_match(prompt: str, runs: list[dict[str, Any]], *, threshold: float
     return best_run
 
 
-def generate_plan_from_prompt_stub(
+def generate_plan_from_prompt_curated(
     prompt: str,
     project_root: Path | str,
     *,
@@ -92,7 +92,7 @@ def generate_plan_from_prompt_stub(
     return PlannerResult(
         prompt=prompt,
         plan=matched_run,
-        planner_backend="stub",
+        planner_backend="curated",
         planner_context=matched_run.get("request_text", "<missing request_text>"),
         raw_output=None,
     )

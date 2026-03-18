@@ -38,13 +38,6 @@ def _collect_declared_plot_paths(run_dir: Path, plan: dict) -> list[Path]:
 
 
 def _collect_declared_table_paths(run_dir: Path, plan: dict) -> list[Path]:
-    """
-    Collect only declared output tables from the executed plan.
-
-    This intentionally excludes intermediate data artifacts like:
-    - extracted_data.csv
-    - processed_data.csv
-    """
     paths: list[Path] = []
     for job in plan.get("jobs", []):
         job_id = job.get("job_id")
@@ -109,10 +102,14 @@ def build_run_summary_markdown(
         lines.append("## Recovery")
         lines.append("")
         lines.append("A second planning pass was required using context from the previous run.")
+        if recovery_details and recovery_details.get("routing_reason"):
+            lines.append(f"- Routing reason: `{recovery_details['routing_reason']}`")
         if recovery_details and recovery_details.get("recovered_run_dir"):
             lines.append(f"- Prior run used for recovery: `{recovery_details['recovered_run_dir']}`")
+        if recovery_details and "prior_job_context_used" in recovery_details:
+            lines.append(f"- Prior job context used: `{recovery_details['prior_job_context_used']}`")
         lines.append("")
-    
+
     lines.append("## Run Directory")
     lines.append("")
     lines.append(f"`{run_dir}`")
@@ -166,7 +163,7 @@ def build_run_summary_markdown(
         lines.append("_No declared output tables found._")
         lines.append("")
 
-    return "\n".join(lines)
+    return "\\n".join(lines)
 
 
 def write_run_summary(
@@ -177,9 +174,9 @@ def write_run_summary(
     verification_summary: str,
     planner_source: str | None = None,
     matched_request_text: str | None = None,
-    filename: str = "run_summary.md",
     recovery_used: bool = False,
     recovery_details: dict[str, Any] | None = None,
+    filename: str = "run_summary.md",
     show_json: bool = False,
 ) -> Path:
     run_dir = Path(run_dir)

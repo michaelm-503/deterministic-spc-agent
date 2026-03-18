@@ -1,8 +1,6 @@
 from __future__ import annotations
-
-from pathlib import Path
 from textwrap import dedent
-
+from pathlib import Path
 
 schema_text = """
 You are generating JSON plans for the Deterministic SPC Agent.
@@ -86,6 +84,9 @@ Filters:
 - start_ts : ISO datetime or null. Optional SQL-level lower bound
 - end_ts : ISO datetime or null. Optional SQL-level upper bound
 
+Job-level params:
+- ewma_alpha : optional float, default 0.2
+
 Parameter hierarchy:
 - job-level params affect preprocessing
 - output-level params affect plot/table behavior only
@@ -153,9 +154,6 @@ Valid job structure example:
   }
 }
 
-Job-level params:
-- ewma_alpha : optional float, default 0.2
-
 -----
 Plot object
 -----
@@ -177,13 +175,6 @@ Supported plot params:
 - y_max : float
 - entities : list
 
-Plot spec:
-{
-  "plot": "spc_time_series",
-  "plot_name": "cnc01_vibration.png",
-  "params": {}
-}
-
 -----
 Table object
 -----
@@ -199,13 +190,6 @@ Supported table params:
 - start_ts : datetime
 - end_ts : datetime
 - entities : list
-
-Table spec:
-{
-  "table": "fleet_ooc_summary",
-  "table_name": "summary.csv",
-  "params": {}
-}
 
 -----
 Replot plans
@@ -278,31 +262,33 @@ In these cases, return exactly:
 
 This output is a recovery sentinel. It tells the backend to load the previous run JSON and re-call the planner with additional context.
 
+CRITICAL PRIORITY RULE:
+If a prompt appears to be a conversational continuation of a previous analysis and required fields cannot be fully determined from the current prompt alone, prefer the recovery sentinel over unsupported_request.
+
+Conversational continuation markers include prompts beginning with or strongly implying:
+- now
+- instead
+- change
+- modify
+- update
+- remake
+- show me instead
+- add
+- remove
+- zoom
+
+Examples of prompts that should prefer recovery:
+- "Now show me vibration data."
+- "Now show me temperature data."
+- "Now show me the last 14 days."
+- "Change it to ARM."
+- "Show me CNC02 temp data."
+- "Remake it with vibration data."
+
 After context is added, the second planner call may return:
 - a valid execution plan
 - a valid replot plan
 - an unsupported_request
-
-Follow-up conversational requests should prefer recovery over unsupported_request when the missing information is likely available from the previous run.
-
-Examples:
-- "Now show me vibration data"
-- "What about temperature data?"
-- "Extend to the last 14 days"
-- "Show me ARM tools"
-- "Show me CNC02 temp data"
-
-If a prompt begins with conversational continuation language such as:
-- now
-- remake it
-- show me instead
-- change it to
-- replot
-- zoom in
-- add
-- remove
-
-and the request cannot be resolved from the current prompt alone, prefer the recovery sentinel over unsupported_request.
 
 -----
 Unsupported plans
@@ -334,7 +320,6 @@ If a request cannot be matched to a supported workflow, return exactly:
 }
 
 The planner can substitute additional messages for "reason" for improved feedback to the user.
-
 """
 
 
@@ -368,7 +353,6 @@ Rules:
 - use null for unspecified time bounds
 - entity_group must be equal to entity.str[:3] when entity is provided
 - use 2024-01-15 as the current date if relative time references are provided in the prompt
-- prefer the recovery sentinel first before returning unsupported plan.
 
 Allowed sql_template values:
 {sql_keys}
@@ -427,8 +411,6 @@ Use the previous run as context and generate the correct response as one of:
 2. a valid replot plan
 3. an unsupported_request
 
-
-
 Decision rules:
 - Use a replot plan only if the requested change can be satisfied by reusing the original processed dataset or a subset of it
 - Use an execution plan if the request requires:
@@ -439,9 +421,7 @@ Decision rules:
 - If required values still cannot be determined from the previous run context, return an unsupported_request
 
 Additional rules:
-- output JSON only
-- do not write SQL
-- do not write Python
+- Output JSON only
 - Never invent timestamps
 - If the prior run JSON includes _metadata.timestamp and you return a final replot plan, use that timestamp to form run_dir
 - If you return a final replot plan, reuse only existing job_id values from the prior run
