@@ -80,7 +80,7 @@ def compute_fleet_ooc_summary(df: pd.DataFrame, job: dict, params: dict | None =
     summary = (
         chart_df
         .groupby("entity", dropna=False)
-        .apply(_agg)
+        .apply(_agg, include_groups=False)
         .reset_index()
         .sort_values("entity")
         .reset_index(drop=True)

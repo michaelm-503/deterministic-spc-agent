@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deterministic-spc-agent"
+version = "0.4.0"
+description = "Guardrailed deterministic AI planner for manufacturing SPC workflows"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Michael C. Moore" }
+]
+license = { text = "MIT" }
+dependencies = [
+  "pandas",
+  "numpy",
+  "duckdb",
+  "matplotlib",
+  "tabulate",
+  "streamlit",
+  "openai",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["spc_agent*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

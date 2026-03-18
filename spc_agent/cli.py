@@ -2,57 +2,83 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import sys
 from pathlib import Path
-from typing import Any
-
-def _load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        raise FileNotFoundError(f"JSON file not found: {path}")
-    try:
-        return json.loads(path.read_text())
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in {path}: {e}") from e
 
 
-def _project_root(explicit_root: str | None) -> Path:
-    # If caller passes --project-root use it; else assume CLI is run from repo root.
-    return Path(explicit_root).resolve() if explicit_root else Path.cwd().resolve()
+def _project_root(project_root: str | None) -> Path:
+    return Path(project_root).resolve() if project_root else Path.cwd().resolve()
 
 
-def _is_plan_library(obj: dict[str, Any]) -> bool:
-    return isinstance(obj.get("runs"), list)
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text())
 
 
-def _resolve_run(plan_or_lib: dict[str, Any], run_index: int | None) -> dict[str, Any]:
-    """
-    Accepts either:
-      - a plan library: {"runs":[...]}
-      - a single run: {"run_id":..., "jobs":[...]}
-    """
-    if _is_plan_library(plan_or_lib):
-        runs = plan_or_lib["runs"]
-        if not runs:
-            raise ValueError("Plan library has no runs: runs[] is empty")
+def _is_plan_library(plan: dict) -> bool:
+    return isinstance(plan.get("runs"), list)
 
-        idx = 0 if run_index is None else run_index
-        if idx < 0 or idx >= len(runs):
-            raise IndexError(f"--run-index {idx} out of range (0..{len(runs)-1})")
-        return runs[idx]
 
-    # single run
-    if run_index is not None:
-        raise ValueError("Input JSON is a single run (no runs[]). Remove --run-index.")
-    return plan_or_lib
+def cmd_setup(args: argparse.Namespace) -> int:
+    root = _project_root(args.project_root)
+
+    subprocess.run(
+        [sys.executable, "scripts/setup_data.py", "--project-root", str(root)],
+        check=True,
+        cwd=str(root),
+    )
+    subprocess.run(
+        [sys.executable, "scripts/build_planner_catalog.py", "--project-root", str(root)],
+        check=True,
+        cwd=str(root),
+    )
+
+    print("✅ Setup complete")
+    return 0
+
+
+def cmd_ask(args: argparse.Namespace) -> int:
+    from spc_agent.agent.agent_runner import ask_agent
+
+    root = _project_root(args.project_root)
+    planner_config = {
+        "model": args.model,
+        "temperature": args.temperature,
+    }
+
+    result = ask_agent(
+        prompt=args.prompt,
+        project_root=root,
+        planner_backend=args.planner_backend,
+        planner_file=args.planner_file,
+        planner_config=planner_config,
+        show_json=args.show_json,
+        verbose=args.verbose,
+    )
+
+    if result.run_summary_path is not None:
+        print(f"✅ Summary: {result.run_summary_path}")
+    elif result.run_dir is not None:
+        print(f"✅ Artifacts: {result.run_dir}")
+    else:
+        print(result.verification_summary)
+
+    return 0 if result.verification_ok or result.unsupported_request else 2
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    from runner.validate_plan import validate_plan_library, validate_run_plan
+    from runner.validate_plan import (
+        validate_plan_library,
+        validate_replot_plan,
+        validate_run_plan,
+    )
 
-    root = _project_root(args.project_root)
     plan = _load_json(Path(args.plan_json))
 
-    # Validate plan lib vs single run
-    if _is_plan_library(plan):
+    if plan.get("mode") == "replot":
+        validate_replot_plan(plan)
+        print("✅ Replot plan validation passed")
+    elif _is_plan_library(plan):
         validate_plan_library(plan)
         print("✅ Plan library validation passed")
     else:
@@ -63,15 +89,17 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    from runner.validate_plan import validate_run_plan
     from runner.run_one_run import run_one_run
 
     root = _project_root(args.project_root)
     plan_or_lib = _load_json(Path(args.plan_json))
-    run_plan = _resolve_run(plan_or_lib, args.run_index)
 
-    # Validate one run before execution
-    validate_run_plan(run_plan)
+    if _is_plan_library(plan_or_lib):
+        if args.run_index is None:
+            raise ValueError("Plan library requires --run-index")
+        run_plan = plan_or_lib["runs"][args.run_index]
+    else:
+        run_plan = plan_or_lib
 
     run_dir = run_one_run(run_plan, root)
     print(f"✅ Run executed: {run_dir}")
@@ -79,43 +107,44 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_replot(args: argparse.Namespace) -> int:
-    """
-    Replot can accept:
-      - a single run plan (recommended)
-      - or a plan library + --run-index (we'll replot just that run)
-    """
     from runner.replot_run import replot_from_plan
 
     root = _project_root(args.project_root)
     plan_or_lib = _load_json(Path(args.plan_json))
-    replot_plan = _resolve_run(plan_or_lib, args.run_index)
 
-    out = replot_from_plan(replot_plan, root, override_run_dir=args.run_dir)
+    if _is_plan_library(plan_or_lib):
+        if args.run_index is None:
+            raise ValueError("Plan library requires --run-index")
+        plan = plan_or_lib["runs"][args.run_index]
+    else:
+        plan = plan_or_lib
 
-    # replot_from_plan may return Path or list[Path]; normalize for printing
+    out = replot_from_plan(plan, root, override_run_dir=args.run_dir)
+
     if isinstance(out, list):
         for p in out:
             print(f"✅ Replot created: {p}")
     else:
         print(f"✅ Replot created: {out}")
-
     return 0
 
+
 def cmd_verify(args: argparse.Namespace) -> int:
-    from verify.verify_hashes import verify_run_hashes, format_verification_result
+    from verify.verify_hashes import format_verification_result, verify_run_hashes
 
     run_dir = Path(args.run_dir)
     if not run_dir.exists():
         raise FileNotFoundError(f"Run directory not found: {run_dir}")
-    
+
     result = verify_run_hashes(run_dir)
     print(format_verification_result(result))
     return 0 if result.ok else 2
 
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="spc_agent",
-        description="Deterministic SPC Agent CLI (Phase 3)",
+        description="Deterministic SPC Agent CLI",
     )
     p.add_argument(
         "--project-root",
@@ -125,35 +154,44 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub = p.add_subparsers(dest="command", required=True)
 
-    # validate
-    pv = sub.add_parser("validate", help="Validate a plan library or a single run JSON.")
-    pv.add_argument("plan_json", help="Path to plan JSON (library or single run).")
+    ps = sub.add_parser("setup", help="Initialize DuckDB and planner catalog.")
+    ps.set_defaults(func=cmd_setup)
+
+    pa = sub.add_parser("ask", help="Run the natural-language planner/executor flow.")
+    pa.add_argument("prompt", help="Natural-language request.")
+    pa.add_argument("--planner-backend", default="auto", choices=["auto", "llm", "stub"])
+    pa.add_argument("--planner-file", default="planner/demo_gallery.json")
+    pa.add_argument("--model", default="gpt-4.1")
+    pa.add_argument("--temperature", type=float, default=0.0)
+    pa.add_argument("--show-json", action="store_true")
+    pa.add_argument("--verbose", action="store_true")
+    pa.set_defaults(func=cmd_ask)
+
+    pv = sub.add_parser("validate", help="Validate a plan library, run plan, or replot plan.")
+    pv.add_argument("plan_json", help="Path to plan JSON.")
     pv.set_defaults(func=cmd_validate)
 
-    # run
     pr = sub.add_parser("run", help="Execute one run from a plan library or a single run JSON.")
     pr.add_argument("plan_json", help="Path to plan JSON (library or single run).")
     pr.add_argument("--run-index", type=int, default=None, help="Index into runs[] when plan_json is a library.")
     pr.set_defaults(func=cmd_run)
 
-    # replot
     pp = sub.add_parser("replot", help="Replot from an existing run plan JSON (no SQL/preprocess).")
-    pp.add_argument("plan_json", help="Path to run JSON (or plan library).")
+    pp.add_argument("plan_json", help="Path to replot JSON.")
     pp.add_argument("--run-index", type=int, default=None, help="Index into runs[] when plan_json is a library.")
-    pp.add_argument("--run-dir", default=None, help="Override run_dir from the JSON (runs/<timestamp>). Useful for manual replot.")
+    pp.add_argument("--run-dir", default=None, help="Override run_dir from the JSON.")
     pp.set_defaults(func=cmd_replot)
 
-    # verify
     pf = sub.add_parser("verify", help="Verify artifacts from a run directory.")
-    pf.add_argument("run_dir", help="Path to base run directory (runs/<timestamp>).")
+    pf.add_argument("run_dir", help="Path to run directory.")
     pf.set_defaults(func=cmd_verify)
-    
+
     return p
 
 
-def main(argv: list[str] | None = None) -> int:
+def main() -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args()
     return int(args.func(args))
 
 

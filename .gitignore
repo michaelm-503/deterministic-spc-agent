@@ -1,5 +1,6 @@
 # Data and generated artifacts
-/data/
+/data/mfg.duckdb
+/data/processed/
 /runs/
 
 # Jupyter

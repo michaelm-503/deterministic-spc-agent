@@ -1,0 +1,23 @@
+{
+  "mode": "replot",
+  "run_ref": {
+    "type": "latest_job_id",
+    "job_id": "arm_vibration_7d"
+  },
+  "jobs": [
+    {
+      "job_id": "arm_vibration_7d",
+      "outputs": {
+        "plots": [
+          {
+            "plot": "fleet_time_trend",
+            "plot_name": "arm_vibration_latest_job.png",
+            "params": {
+              "window_days": 3
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

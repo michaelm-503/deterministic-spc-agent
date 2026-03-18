@@ -1,0 +1,68 @@
+{
+  "entities": [
+    "ARM16",
+    "ARM17",
+    "ARM18",
+    "ARM19",
+    "ARM20",
+    "CNC01",
+    "CNC02",
+    "CNC03",
+    "CNC04",
+    "CNC05",
+    "CPR11",
+    "CPR12",
+    "CPR13",
+    "CPR14",
+    "CPR15",
+    "PMP06",
+    "PMP07",
+    "PMP08",
+    "PMP09",
+    "PMP10"
+  ],
+  "entities_by_group": {
+    "ARM": [
+      "ARM16",
+      "ARM17",
+      "ARM18",
+      "ARM19",
+      "ARM20"
+    ],
+    "CNC": [
+      "CNC01",
+      "CNC02",
+      "CNC03",
+      "CNC04",
+      "CNC05"
+    ],
+    "CPR": [
+      "CPR11",
+      "CPR12",
+      "CPR13",
+      "CPR14",
+      "CPR15"
+    ],
+    "PMP": [
+      "PMP06",
+      "PMP07",
+      "PMP08",
+      "PMP09",
+      "PMP10"
+    ]
+  },
+  "entity_groups": [
+    "ARM",
+    "CNC",
+    "CPR",
+    "PMP"
+  ],
+  "sensors": [
+    "ambient_temp",
+    "current_phase_avg",
+    "pressure_level",
+    "rpm",
+    "temperature_motor",
+    "vibration_rms"
+  ]
+}

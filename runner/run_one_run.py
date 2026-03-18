@@ -195,11 +195,45 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
     # Schema Validation
     validate_run_plan(plan)
 
-    run_id = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    run_dir = project_root / "runs" / run_id
+    run_timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    run_dir = project_root / "runs" / run_timestamp
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    (run_dir / "run.json").write_text(json.dumps(plan, indent=2))
+    # Build run.json with reserved metadata block
+    job_ids = []
+    entities = set()
+    entity_groups = set()
+    sensors = set()
+
+    for job in plan.get("jobs", []):
+        job_id = job.get("job_id")
+        if job_id:
+            job_ids.append(job_id)
+
+        filters = job.get("filters", {}) or {}
+
+        entity = filters.get("entity")
+        if entity:
+            entities.add(entity)
+
+        entity_group = filters.get("entity_group")
+        if entity_group:
+            entity_groups.add(entity_group)
+
+        sensor = filters.get("sensor")
+        if sensor:
+            sensors.add(sensor)
+
+    run_json = dict(plan)
+    run_json["_metadata"] = {
+        "timestamp": run_timestamp,
+        "job_ids": job_ids,
+        "entity_groups": sorted(entity_groups),
+        "entities": sorted(entities),
+        "sensors": sorted(sensors),
+    }
+
+    (run_dir / "run.json").write_text(json.dumps(run_json, indent=2))
 
     # Conditional path for smoketest vs. actual run
     db_path = os.environ.get("SPC_AGENT_DUCKDB_PATH")
@@ -219,11 +253,7 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
                 ) from e
     finally:
         con.close()
-        
-    # Create hashes
-    hashes = compute_run_hashes(run_dir)
-    write_hash_manifest(run_dir, hashes)
-    
+
     return run_dir
 
 def _parse_ts(ts):

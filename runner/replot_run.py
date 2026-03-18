@@ -33,7 +33,7 @@ import pandas as pd
 
 from runner.registry import PLOT_REGISTRY, TABLE_REGISTRY
 from verify.compute_hashes import compute_run_hashes, write_hash_manifest
-
+from runner.run_lookup import resolve_run_ref, RunResolutionError
 
 def _apply_optional_time_slice(df: pd.DataFrame, params: dict | None) -> pd.DataFrame:
     """
@@ -108,11 +108,35 @@ def _require_columns(
         )
 
 def _resolve_run_dir(plan: dict, project_root: Path, override_run_dir: str | None) -> Path:
+    """
+    Resolution order:
+      1. explicit CLI override --run-dir
+      2. plan.run_dir (backward compatibility)
+      3. plan.run_ref (preferred semantic reference)
+    """
     if override_run_dir:
         run_dir = Path(override_run_dir)
         if not run_dir.is_absolute():
             run_dir = (project_root / run_dir).resolve()
         return run_dir
+
+    # backward-compatible direct path
+    run_dir_str = plan.get("run_dir")
+    if run_dir_str:
+        run_dir = Path(run_dir_str)
+        if not run_dir.is_absolute():
+            run_dir = (project_root / run_dir).resolve()
+        return run_dir
+
+    # preferred semantic reference
+    run_ref = plan.get("run_ref")
+    if run_ref is not None:
+        return resolve_run_ref(run_ref, project_root).resolve()
+
+    raise ValueError(
+        "Replot plan must include one of: 'run_dir' or 'run_ref'. "
+        "You may also pass --run-dir to override."
+    )
 
     # fallback to plan value
     run_dir_str = plan.get("run_dir")
@@ -126,6 +150,31 @@ def _resolve_run_dir(plan: dict, project_root: Path, override_run_dir: str | Non
     if not run_dir.is_absolute():
         run_dir = (project_root / run_dir).resolve()
     return run_dir
+
+def _validate_job_exists(run_dir: Path, job_id: str) -> None:
+    """
+    Ensure a job_id exists inside the referenced run before attempting replot.
+    Provides a clean error instead of a deep FileNotFoundError.
+
+    Tip: run_ref="latest" selects the newest run. 
+    Use run_ref={"type":"latest_job_id","job_id":"<job_id>"} to target a specific workflow.
+    """
+    run_json_path = run_dir / "run.json"
+
+    if not run_json_path.exists():
+        raise RuntimeError(f"run.json not found in run directory: {run_dir}")
+
+    run_json = json.loads(run_json_path.read_text())
+
+    metadata = run_json.get("_metadata", {}) or {}
+    available_jobs = metadata.get("job_ids", [])
+
+    if job_id not in available_jobs:
+        raise RuntimeError(
+            f"Replot failed: job_id '{job_id}' was not found in the referenced run.\n"
+            f"Available job_ids: {available_jobs}\n"
+            f"Resolved run directory: {run_dir}"
+        )
 
 def replot_job(
     run_dir: Path | str,
@@ -346,39 +395,80 @@ def replot_from_plan(plan: dict, project_root: Path | str, *, override_run_dir: 
     """
     Convenience: replot based on a plan object.
 
-    Expected plan shape:
+    Supported shapes:
+
+    1. Backward-compatible direct path:
     {
       "mode": "replot",
       "run_dir": "runs/<timestamp>",
-      "jobs": [
-        {"job_id": "...", "outputs": {...}},
-        ...
-      ]
+      "jobs": [...]
+    }
+
+    2. Preferred semantic reference:
+    {
+      "mode": "replot",
+      "run_ref": "latest",
+      "jobs": [...]
+    }
+
+    or:
+    {
+      "mode": "replot",
+      "run_ref": {
+        "type": "latest_job_id",
+        "job_id": "arm_vibration_7d"
+      },
+      "jobs": [...]
     }
     """
+    
     if plan.get("mode") != "replot":
         raise ValueError("plan.mode must be 'replot'")
 
+    if ("run_dir" not in plan) and ("run_ref" not in plan) and (override_run_dir is None):
+        raise ValueError("Replot plan must include 'run_dir' or 'run_ref'.")
+
     project_root = Path(project_root)
-    run_dir = _resolve_run_dir(plan, project_root, override_run_dir)
+    
+    try:
+        run_dir = _resolve_run_dir(plan, project_root, override_run_dir)
+    except RunResolutionError as e:
+        print(f"❌ Replot aborted: {e}")
+        return []
+    except ValueError as e:
+        print(f"❌ Replot aborted: {e}")
+        return []
     
     if not run_dir.exists():
-        raise FileNotFoundError(
-            f"Run directory not found: '{run_dir}'. "
-            f"Check plan.run_dir; expected something like 'runs/2024-01-15T12-05-11'."
+        print(
+            f"❌ Replot aborted: Run directory not found: '{run_dir}'. "
+            f"Expected something like 'runs/2024-01-15T12-05-11'."
         )
+        return []
 
     out_dirs: list[Path] = []
     jobs = plan.get("jobs", []) or []
     if not isinstance(jobs, list) or len(jobs) == 0:
         raise ValueError("replot plan.jobs must be a non-empty list")
 
-    for i, job_spec in enumerate(jobs):
-        if not isinstance(job_spec, dict):
-            raise ValueError(f"Invalid job spec at plan.jobs[{i}]: expected object")
+    for i, job_spec in enumerate(plan["jobs"]):
+    
         if "job_id" not in job_spec:
             raise ValueError(f"Missing required key 'job_id' at plan.jobs[{i}]")
-        outputs = job_spec.get("outputs", {}) or {}
-        out_dirs.append(replot_job(run_dir, job_spec["job_id"], outputs))
+    
+        job_id = job_spec["job_id"]
+    
+        try:
+            _validate_job_exists(run_dir, job_id)
+    
+            outputs = job_spec.get("outputs", {}) or {}
+    
+            out_dirs.append(
+                replot_job(run_dir, job_id, outputs)
+            )
+    
+        except RuntimeError as e:
+            print(f"❌ Replot aborted: {e}")
+            return []
     
     return out_dirs

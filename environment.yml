@@ -6,7 +6,9 @@ dependencies:
   - pandas
   - numpy
   - duckdb
-  - matplotlib
-  - jupyter
-  - pip
+  - matplotlib>=3.8
   - tabulate
+  - streamlit
+  - pip
+  - pip:
+      - openai
