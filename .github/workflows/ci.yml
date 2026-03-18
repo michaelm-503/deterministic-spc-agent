@@ -9,8 +9,9 @@ on:
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Miniforge (conda-forge only)
@@ -22,20 +23,25 @@ jobs:
           use-mamba: true
           conda-remove-defaults: true
 
-      - name: Install from lockfile
+      - name: Create environment from environment.yml
         shell: bash -l {0}
         run: |
           mamba env remove -n agentic_mfg -y || true
-          mamba env create -n agentic_mfg -f conda-lock.yml
+          mamba env create -n agentic_mfg -f environment.yml
 
-      - name: Verify Python + imports
+      - name: Verify Python and core imports
         shell: bash -l {0}
         run: |
           mamba run -n agentic_mfg python --version
           mamba run -n agentic_mfg python -c "import sys; print(sys.executable)"
           mamba run -n agentic_mfg python -c "import duckdb, pandas, numpy, matplotlib"
 
-      - name: Run smoke test + verify hashes
+      - name: Show installed packages
+        shell: bash -l {0}
+        run: |
+          mamba run -n agentic_mfg conda list
+
+      - name: Run smoke test and verify artifacts
         shell: bash -l {0}
         run: |
           set -euo pipefail
@@ -44,12 +50,12 @@ jobs:
           rm -rf runs
           mkdir -p runs
 
-          # 1) Run the smoke test (creates runs/<timestamp>/...)
+          # Run smoke test (should generate a run directory)
           mamba run -n agentic_mfg python tests/smoke_test.py
 
-          # 2) Find newest run directory produced by the test
+          # Locate most recent run directory
           RUN_DIR="$(ls -1dt runs/*/ | head -n 1)"
           echo "Newest run_dir: ${RUN_DIR}"
 
-          # 3) Verify hashes end-to-end
+          # Verify hashes and artifacts
           mamba run -n agentic_mfg python -m spc_agent verify "${RUN_DIR}"
