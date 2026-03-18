@@ -254,10 +254,6 @@ def run_one_run(plan: dict, project_root: Path) -> Path:
     finally:
         con.close()
 
-    # Create hashes
-    hashes = compute_run_hashes(run_dir)
-    write_hash_manifest(run_dir, hashes)
-
     return run_dir
 
 def _parse_ts(ts):

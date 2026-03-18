@@ -65,7 +65,6 @@ def build_run_summary_markdown(
     prompt: str,
     plan: dict,
     run_dir: Path,
-    verification_summary: str,
     planner_source: str | None = None,
     matched_request_text: str | None = None,
     recovery_used: bool = False,
@@ -115,13 +114,6 @@ def build_run_summary_markdown(
     lines.append(f"`{run_dir}`")
     lines.append("")
 
-    lines.append("## Verification")
-    lines.append("")
-    lines.append("```")
-    lines.append(verification_summary.strip())
-    lines.append("```")
-    lines.append("")
-
     if show_json:
         lines.append("## Executed Plan")
         lines.append("")
@@ -163,7 +155,7 @@ def build_run_summary_markdown(
         lines.append("_No declared output tables found._")
         lines.append("")
 
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def write_run_summary(
@@ -171,7 +163,6 @@ def write_run_summary(
     prompt: str,
     plan: dict,
     run_dir: Path,
-    verification_summary: str,
     planner_source: str | None = None,
     matched_request_text: str | None = None,
     recovery_used: bool = False,
@@ -184,7 +175,6 @@ def write_run_summary(
         prompt=prompt,
         plan=plan,
         run_dir=run_dir,
-        verification_summary=verification_summary,
         planner_source=planner_source,
         matched_request_text=matched_request_text,
         recovery_used=recovery_used,

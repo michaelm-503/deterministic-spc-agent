@@ -161,8 +161,9 @@ def _handle_execution_plan(
 ) -> AgentRunResult:
     from runner.run_one_run import run_one_run
     from runner.validate_plan import validate_run_plan
+    from verify.compute_hashes import compute_run_hashes, write_hash_manifest
     from verify.verify_hashes import verify_run_hashes, format_verification_result
-
+    
     run_plan = _resolve_single_run(plan_obj)
 
     _vprint(verbose, "=== resolved run plan ===")
@@ -176,39 +177,41 @@ def _handle_execution_plan(
     _vprint(verbose)
 
     run_dir = run_one_run(run_plan, project_root)
-
+    
     _vprint(verbose, "=== execution ===")
     _vprint(verbose, f"run_dir: {run_dir}")
     _vprint(verbose)
-
-    verification_result = verify_run_hashes(run_dir)
-    verification_summary = format_verification_result(verification_result)
-
-    _vprint(verbose, "=== verification ===")
-    _vprint(verbose, verification_summary)
-    _vprint(verbose)
-
+    
     run_summary_path = write_run_summary(
         prompt=prompt,
         plan=run_plan,
         run_dir=run_dir,
-        verification_summary=verification_summary,
         planner_source=planner_backend,
         matched_request_text=planner_context,
         recovery_used=recovery_used,
         recovery_details=recovery_details,
         show_json=show_json,
     )
-
+    
     _vprint(verbose, "=== report ===")
     _vprint(verbose, f"run_summary_path: {run_summary_path}")
     _vprint(verbose)
-
+    
     _write_planner_debug_artifacts(
         run_dir,
         planner_raw_output=planner_raw_output,
         plan_to_write=run_plan,
     )
+    
+    hashes = compute_run_hashes(run_dir)
+    write_hash_manifest(run_dir, hashes)
+    
+    verification_result = verify_run_hashes(run_dir)
+    verification_summary = format_verification_result(verification_result)
+    
+    _vprint(verbose, "=== verification ===")
+    _vprint(verbose, verification_summary)
+    _vprint(verbose)
 
     return AgentRunResult(
         prompt=prompt,
