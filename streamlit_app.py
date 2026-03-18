@@ -71,6 +71,9 @@ def _load_demo_prompts(project_root: Path, planner_file: str) -> list[str]:
     prompts = [str(run.get("request_text", "")).strip() for run in runs if run.get("request_text")]
     return [p for p in prompts if p]
 
+def _set_random_demo_prompt(demo_prompts: list[str]) -> None:
+    if demo_prompts:
+        st.session_state["prompt_input"] = random.choice(demo_prompts)
 
 def _collect_output_artifacts(result) -> tuple[list[Path], list[Path]]:
     if result.run_dir is None:
@@ -214,10 +217,12 @@ with col1:
 with col2:
     st.write("")
     st.write("")
-    if st.button("Random Demo Prompt", width='content'):
-        if demo_prompts:
-            st.session_state.prompt_input = random.choice(demo_prompts)
-            st.rerun()
+    st.button(
+        "Random Demo Prompt",
+        use_container_width=True,
+        on_click=_set_random_demo_prompt,
+        args=(demo_prompts,),
+    )
 
 run_clicked = st.button("Run Agent", type="primary", width='content')
 
