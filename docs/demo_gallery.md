@@ -1,62 +1,37 @@
-# Deterministic SPC Agent -- Demo Gallery
+# Deterministic SPC Agent
+## Demo Gallery
 
-This gallery presents 13 structured demo scenarios showcasing
-deterministic SPC workflows, fleet health analysis, maintenance-aware
-investigation, and replot capabilities.
+Try the live app: [deterministic-spc-agent.streamlit.app](https://deterministic-spc-agent.streamlit.app/)
 
-------------------------------------------------------------------------
+This gallery presents curated demo scenarios showcasing deterministic SPC workflows, fleet health analysis, maintenance-aware investigation, and replot capabilities.
+
+---
 
 ## Table of Contents
 
--   [CPR11 needed maintenance last week due to motor temperature and
-    again due to vibration. How is the tool doing
-    now?](#cpr11-needed-maintenance-last-week-due-to-motor-temperature-and-again-due-to-vibration-how-is-the-tool-doing-now)
--   [Compare RPM trends for CNC03 and
-    CNC04.](#compare-rpm-trends-for-cnc03-and-cnc04)
--   [The ARM technician will be out next week. Are any vibration PMs
-    coming
-    up?](#the-arm-technician-will-be-out-next-week-are-any-vibration-pms-coming-up)
--   [PMP06 had a vibration event around Jan 3. Show vibration trend ±3
-    days around that
-    date.](#pmp06-had-a-vibration-event-around-jan-3-show-vibration-trend-3-days-around-that-date)
--   [PMP07 vibration around Jan 7. Plot ±3 days and hide the
-    legend.](#pmp07-vibration-around-jan-7-plot-3-days-and-hide-the-legend)
--   [PMP07 had current/rpm issues around Jan 2. Show both current and
-    rpm ±2
-    days.](#pmp07-had-currentrpm-issues-around-jan-2-show-both-current-and-rpm-2-days)
--   [PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3
-    days and an OOC summary table last 3 days
-    (temp).](#pmp09-had-tempcurrentrpm-issues-on-jan-12-show-temp-trend-last-3-days-and-an-ooc-summary-table-last-3-days-temp)
--   [ARM17 vibration around Jan 3. Compare ARM fleet vibration last 7
-    days, then ARM17 ±3 days around Jan
-    3.](#arm17-vibration-around-jan-3-compare-arm-fleet-vibration-last-7-days-then-arm17-3-days-around-jan-3)
--   [ARM20 had current/rpm/temp issues on Jan 6. Show last 5 days for
-    current, rpm, and
-    temp.](#arm20-had-currentrpmtemp-issues-on-jan-6-show-last-5-days-for-current-rpm-and-temp)
--   [ARM19 issues on Jan 11 then pressure instability on Jan 12. Show
-    pressure and temp from Jan 10--Jan
-    13.](#arm19-issues-on-jan-11-then-pressure-instability-on-jan-12-show-pressure-and-temp-from-jan-10jan-13)
--   [CPR14 had pressure instability around Jan 9. Show pressure ±2 days,
-    EWMA
-    only.](#cpr14-had-pressure-instability-around-jan-9-show-pressure-2-days-ewma-only)
--   [CPR15 had vibration on Jan 9 and pressure instability on Jan 11.
-    Show last 7 days for vibration and
-    pressure.](#cpr15-had-vibration-on-jan-9-and-pressure-instability-on-jan-11-show-last-7-days-for-vibration-and-pressure)
--   [Replot pressure for just the bad PM cycle. 1/10-1/12.](#replot-pressure-for-just-the-bad-pm-cycle-110-112)
--   [After CPR15 post-PM pressure instability, show CPR fleet pressure
-    last 3 days and CPR15
-    separately.](#after-cpr15-post-pm-pressure-instability-show-cpr-fleet-pressure-last-3-days-and-cpr15-separately)
+-   [CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?](#example-01)
+-   [Compare RPM trends for CNC03 and CNC04.](#example-02)
+-   [The ARM technician will be out next week. Are any vibration PMs coming up?](#example-03)
+-   [PMP06 had a vibration event around Jan 3. Show vibration trend ±3 days around that date.](#example-04)
+-   [PMP07 vibration around Jan 7. Plot ±3 days and hide the legend.](#example-05)
+-   [PMP07 had current/rpm issues around Jan 2. Show both current and rpm ±2 days.](#example-06)
+-   [PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).](#example-07)
+-   [ARM17 vibration around Jan 3. Compare ARM fleet vibration last 7 days, then ARM17 ±3 days around Jan 3.](#example-08)
+-   [ARM20 had current/rpm/temp issues on Jan 6. Show last 5 days for current, rpm, and temp.](#example-09)
+-   [ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10--Jan 13.](#example-10)
+-   [CPR14 had pressure instability around Jan 9. Show pressure ±2 days, EWMA only.](#example-11)
+-   [CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and pressure.](#example-12)
+-   [Replot pressure for just the bad PM cycle. 1/10-1/12.](#example-13)
+-   [After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.](#example-14)
 
+---
 
+## Example-01
 
+#### Prompt 
+>CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?
 
-------------------------------------------------------------------------
-
-# CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?
-
-*Run ID: `demo_cpr11_health_check`*
-
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -107,7 +82,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cpr11_temperature_motor_spc.png)
 
@@ -115,11 +90,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# Compare RPM trends for CNC03 and CNC04.
+## Example-02
 
-*Run ID: `demo_cnc_rpm_comparison`*
+#### Prompt 
+>Compare RPM trends for CNC03 and CNC04.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -157,17 +133,18 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cnc_fleet_rpm_time_trend_CNC03_CNC04.png)
 
 ------------------------------------------------------------------------
 
-# The ARM technician will be out next week. Are any vibration PMs coming up?
+## Example-03
 
-*Run ID: `demo_arm_vibration`*
+#### Prompt 
+>The ARM technician will be out next week. Are any vibration PMs coming up?
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -215,7 +192,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/arm_fleet_vibration_time_trend.png)
 
@@ -231,11 +208,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# PMP06 had a vibration event around Jan 3. Show vibration trend ±3 days around that date.
+## Example-04
 
-*Run ID: `demo_pmp06_vibration_pm_window_jan03`*
+#### Prompt 
+>PMP06 had a vibration event around Jan 3. Show vibration trend ±3 days around that date.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -272,17 +250,18 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/pmp06_vibration_pm_window_jan03.png)
 
 ------------------------------------------------------------------------
 
-# PMP07 vibration around Jan 7. Plot ±3 days and hide the legend.
+## Example-05
 
-*Run ID: `demo_pmp07_vibration_pm_window_jan07_hide_legend`*
+#### Prompt 
+>PMP07 vibration around Jan 7. Plot ±3 days and hide the legend.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -319,17 +298,18 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/pmp07_vibration_pm_window_jan07.png)
 
 ------------------------------------------------------------------------
 
-# PMP07 had current/rpm issues around Jan 2. Show both current and rpm ±2 days.
+## Example-06
 
-*Run ID: `demo_pmp07_current_rpm_pm_window_jan02`*
+#### Prompt 
+>PMP07 had current/rpm issues around Jan 2. Show both current and rpm ±2 days.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -390,7 +370,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/pmp07_current_jan02.png)
 
@@ -398,11 +378,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).
+## Example-07
 
-*Run ID: `demo_pmp09_temp_snapshot_plus_ooc_last3d`*
+#### Prompt 
+>PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -449,7 +430,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/pmp09_temp_last3d.png)
 
@@ -459,11 +440,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# ARM17 vibration around Jan 3. Compare ARM fleet vibration last 7 days, then ARM17 ±3 days around Jan 3.
+## Example-08
 
-*Run ID: `demo_arm_vibration_fleet_then_arm17_pm_window`*
+#### Prompt 
+>ARM17 vibration around Jan 3. Compare ARM fleet vibration last 7 days, then ARM17 ±3 days around Jan 3.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -538,7 +520,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/arm_fleet_vibration_last7d.png)
 
@@ -556,11 +538,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# ARM20 had current/rpm/temp issues on Jan 6. Show last 5 days for current, rpm, and temp.
+## Example-09
 
-*Run ID: `demo_arm20_multi_sensor_last5d`*
+#### Prompt 
+>ARM20 had current/rpm/temp issues on Jan 6. Show last 5 days for current, rpm, and temp.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -643,7 +626,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/arm20_current_last5d.png)
 
@@ -653,16 +636,17 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10--Jan 13.
+## Example-10
 
-*Run ID: `demo_arm19_post_pm_instability_jan10_13`*
+#### Prompt 
+>ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10-Jan 13.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
   "run_id": "demo_arm19_post_pm_instability_jan10_13",
-  "request_text": "ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10\u2013Jan 13.",
+  "request_text": "ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10-Jan 13.",
   "jobs": [
     {
       "job_id": "arm19_pressure_jan10_13",
@@ -718,7 +702,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/arm19_pressure_jan10_13.png)
 
@@ -726,16 +710,17 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# CPR14 had pressure instability around Jan 9. Show pressure ±2 days.
+## Example-11
 
-*Run ID: `demo_cpr14_pressure_pm_window_jan09_ewma_only`*
+#### Prompt 
+>CPR14 had pressure instability around Jan 9. Show pressure ±2 days, EWMA only.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
   "run_id": "demo_cpr14_pressure_pm_window_jan09_ewma_only",
-  "request_text": "CPR14 had pressure instability around Jan 9. Show pressure \u00b12 days",
+  "request_text": "CPR14 had pressure instability around Jan 9. Show pressure \u00b12 days, EWMA only",
   "jobs": [
     {
       "job_id": "cpr14_pressure_jan09_pm_window",
@@ -767,17 +752,18 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cpr14_pressure_pm_window_jan09.png)
 
 ------------------------------------------------------------------------
 
-# CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and pressure.
+## Example-12
 
-*Run ID: `demo_cpr15_vibration_and_pressure_last7d`*
+#### Prompt 
+>CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and pressure.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -836,7 +822,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cpr15_vibration_last7d.png)
 
@@ -844,11 +830,12 @@ investigation, and replot capabilities.
 
 ------------------------------------------------------------------------
 
-# Replot pressure for just the bad PM cycle. 1/10-1/12.
+## Example-13
 
-*Run ID: `replot`*
+#### Prompt 
+>Replot pressure for just the bad PM cycle. 1/10-1/12.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -874,17 +861,18 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cpr15_pressure_bad_pm_cycle_2024_01_10_12.png)
 
 ------------------------------------------------------------------------
 
-# After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.
+## Example-14
 
-*Run ID: `demo_cpr_pressure_fleet_last3d_plus_cpr15`*
+#### Prompt 
+>After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.
 
-## JSON Plan
+#### JSON Plan
 
 ``` json
 {
@@ -958,7 +946,7 @@ investigation, and replot capabilities.
 }
 ```
 
-## Output Artifacts
+#### Output Artifacts
 
 ![Image](../assets/cpr_fleet_pressure_last3d.png)
 

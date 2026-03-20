@@ -1,32 +1,362 @@
-# Deterministic SPC Agent  
+
+# Deterministic SPC Agent
 ## System Architecture
 
-Author: Michael Moore  
-Project: Deterministic SPC Agent  
-Current Architecture: Phase 4 (Agentic Front-End + Interactive Demo)
+
+# 1. Conceptual System Architecture
+
+```mermaid
+flowchart TD
+
+A[User Question]
+
+B[Routing Layer<br/>planner selection + recovery]
+
+C[Planner<br/>Structured JSON]
+
+D[Schema Validation]
+
+E[SQL Execution]
+
+F[Deterministic Preprocessing]
+
+G[Plot / Table Generation]
+
+H[Run Artifacts]
+
+I[Recovery / Context Pass]
+
+J[Replot]
+
+K[Hash Manifest + Verification (optional)]
+
+L[Unsupported Request]
+
+A --> B
+B --> C
+C --> D
+D --> E
+E --> F
+F --> G
+G --> H
+H --> K
+
+C <--> I
+H --> J
+J --> H
+J --> K
+
+C --> L
+I --> L
+```
 
 ---
 
-# 1. Overview
+## User Question
 
-The Deterministic SPC Agent is a guardrailed AI system that converts natural-language requests into deterministic analytics workflows for manufacturing process monitoring.
+The system supports two primary interfaces:
 
-The system allows users to request SPC analysis using plain language while ensuring that all execution remains deterministic, auditable, and restricted to pre-approved analytics modules.
+- **CLI** — programmatic execution (`spc_agent ask`)
+- **Streamlit** — interactive UI and visualization
 
-Instead of allowing an LLM to generate code directly, the architecture uses the LLM only as a **planner** that generates structured JSON execution plans. These plans are validated and then executed by a deterministic analytics engine.
+Both interfaces route into the same planning and execution pipeline.
 
-This design provides the usability benefits of AI while maintaining the reliability and safety required for engineering analytics systems.
+Streamlit servers can run locally or [accessible in the cloud](https://deterministic-spc-agent.streamlit.app).
+
+---
+
+## Routing Layer
+
+The routing layer determines how a request is planned.
+
+Planner selection modes:
+
+- **curated** — exact-match prompts → predefined execution plans  
+- **llm** — LLM generates structured plans for novel queries  
+- **auto** — attempts curated first, then falls back to the LLM planner  
+
+### Recovery routing
+
+For conversational follow-ups, rework requests, or unclear requests, the system may invoke a **recovery pass**:
+
+- re-runs the planner with the most recent successful run context  
+- infers missing filters or entities to make a valid execution plan  
+- links replot request to existing artifacts  
+- attempts to escalate an invalid replot request to a valid execution plan  
+- returns a safe exit for unsupported or undetermined requests  
+- capped at one recovery attempt  
+
+This allows iterative workflows without sacrificing determinism.
+
+---
+
+## Planner
+
+Planner implementations:
+
+- `planner_curated.py`
+- `planner.py` (LLM planner)
+- `planner_prompt.py`
+
+The planner:
+
+- converts natural language → structured JSON  
+- does **not** execute code  
+- is constrained by the planner schema, registry allow-lists, and validation checks  
+
+---
+
+## Validation and Execution
+
+The system converts prompts into validated execution plans.
+
+### Execution-time control flow
+
+```mermaid
+flowchart TD
+
+Prompt --> Router
+Router --> Planner
+Planner --> PlanJSON
+PlanJSON --> Validator
+
+Validator -->|execution plan| Executor
+Validator -->|replot plan| ReplotEngine
+Validator -->|unsupported| Exit
+
+Router -->|context recovery| Recovery
+Recovery --> Planner
+
+Executor --> Artifacts
+ReplotEngine --> Artifacts
+
+Artifacts --> ReportWriter
+ReportWriter --> RunSummary
+```
+
+---
+
+## Deterministic Processing
+
+The execution engine runs fixed analytics workflows.
+
+Each job follows:
+
+SQL extraction → Preprocessing → Output generation
+
+Execution modules must be registered:
+
+- SQL templates (`sql/`)
+- preprocess (`preprocess/`)
+- plots (`plots/`)
+- tables (`tables/`)
+
+This prevents arbitrary code execution.
+
+---
+
+## Run Artifacts
+
+Each execution run produces a reproducible artifact directory:
+
+runs/
+  2026-03-15T18-22-44/
+
+      run.json
+      run_summary.md
+      hashes.json
+      planner_raw.txt
+      planner_plan.json
+
+      job_1/
+          extracted_data.csv
+          processed_data.csv
+          plot.png
+          summary.csv
+
+Artifacts enable:
+
+- reproducibility  
+- auditability  
+- experiment traceability  
+
+After execution:
+
+- run_summary.md is generated  
+- embeds plots, tables, metadata  
+- Streamlit renders directly from artifacts  
+
+Replot workflows generate output artifacts under the referenced job’s replots/ directory and do not create a new run_summary.md.
+
+---
+
+## Recovery
+
+The system supports a recovery sentinel for ambiguous follow-up requests.
+
+The recovery sentinel is triggered when the planner cannot resolve a complete execution plan from a single prompt. Scenarios include (but are not limited to):
+
+- a replot request (whether valid or not)
+- implied information (as a result of a conversational prompt)
+- attempting unsupported requests
+
+This sentinel does **not** mean “final replot plan.”
+
+Instead, it tells the backend to:
+
+1. load the most recent successful run context
+2. re-invoke the planner with enriched input
+3. resolve the request into one of:
+   - a valid execution plan
+   - a valid replot plan
+   - an unsupported response
+
+-
+### When recovery is used
+
+Recovery is typically used for prompts such as:
+
+- “replot that”
+- “remove the legend”
+- “now show me vibration data”
+- “now show me the last 14 days”
+- “change it to ARM”
+
+-
+### Execution vs replot boundary
+
+After recovery context is added:
+
+- use **replot** if the request can be satisfied by reusing the original processed dataset
+- use **execution** if the request requires:
+  - a different sensor
+  - a different entity or entity_group
+  - a wider SQL extraction window
+  - a new extraction workflow
+
+If the request still cannot be safely resolved, return an unsupported response.
+
+-
+### Example: Recovery Escalation to Execution
+
+**User prompt:**
+
+>”now show vibration data instead"
+
+**Initial sentinel:**
+```
+{
+  "mode": "replot",
+  "run_ref": "latest"
+}
+```
+**Additional context provided:**
+
+- previous run was temperature sensor
+
+**After recovery:**
+
+- resolved to execution plan with updated sensor = vibration_rms
+- previous run is used to complete missing information for execution plan: processing workflow, entity & timeframe filters, output workflow and params.
+
+**Reason:**
+
+- Changing sensor requires new SQL extraction, so replot is not valid.
+
+---
+
+## Replot
+
+Replot modifies outputs without recomputing upstream steps.
+
+Replots:
+
+- do **not** rerun SQL extraction
+- do **not** rerun preprocessing
+- reuse prior `processed_data.csv` artifacts
+- write new outputs under:
+
+Replot artifacts stored under:
+
+`job/replots/<timestamp>/`
+
+-
+### Execution vs Replot
+
+- Execution plans perform SQL extraction, preprocessing, and output generation.  
+- Replot plans reuse previously generated processed artifacts and regenerate outputs only.  
+- If a follow-up request requires a different sensor, entity, or wider SQL time window, recovery may resolve it into a new execution plan instead of a replot.  
+
+-
+### Replot Workflow
+
+```mermaid
+flowchart TD
+
+ReplotPlan --> ResolveRunReference
+ResolveRunReference --> LocateJobArtifacts
+LocateJobArtifacts --> LoadProcessedData
+LoadProcessedData --> GenerateOutputs
+GenerateOutputs --> WriteReplotArtifacts
+```
+
+---
+
+## Hashing + Verification
+
+Hashing occurs after all artifacts are written, including:
+
+- run.json  
+- run_summary.md  
+- planner debug artifacts  
+- job artifacts  
+
+This produces:
+
+hashes.json
+
+-
+### Verification
+
+Verification is performed separately:
+
+spc_agent verify <run_dir>
+
+Ensures:
+
+- artifact integrity  
+- reproducibility checks  
+- detection of post-run modification  
+
+---
+
+## Unsupported Requests
+
+Requests may be marked unsupported if:
+
+- schema cannot be satisfied  
+- required parameters cannot be inferred  
+- recovery fails to resolve ambiguity  
+
+Unsupported responses:
+
+- do not execute  
+- do not produce artifacts  
+- preserve system safety  
 
 ---
 
 # 2. Core Design Principles
 
+
+
 ## Deterministic Execution
 
 LLMs do not generate executable code.  
-They generate structured **execution plans** that reference pre-approved modules.
 
-All analytics execution occurs through deterministic Python functions.
+They produce structured execution plans referencing pre-approved modules.
+
+All execution is deterministic Python.
 
 ---
 
@@ -34,9 +364,9 @@ All analytics execution occurs through deterministic Python functions.
 
 LLM output is constrained by:
 
-- a strict JSON schema
-- tool allow-lists
-- validation checks
+- strict JSON schema  
+- tool allow-lists  
+- validation checks  
 
 Invalid plans cannot reach execution.
 
@@ -44,72 +374,42 @@ Invalid plans cannot reach execution.
 
 ## Artifact-Based Reproducibility
 
-Every execution produces a fully reproducible artifact directory containing:
+Every run produces:
 
-- execution plan
-- intermediate datasets
-- generated plots
-- summary tables
-- verification hashes
+- execution plan  
+- intermediate datasets  
+- outputs  
+- hash manifest  
+
+Artifacts are the system’s source of truth.
 
 ---
 
 ## Separation of Concerns
 
-The system separates responsibilities across four layers:
-
-| Layer | Responsibility |
-|------|------|
-| Interface | CLI / Streamlit user interface |
-| Planning | LLM prompt interpretation |
-| Validation | Schema and guardrail enforcement |
-| Execution | Deterministic analytics workflows |
+Interface → Planning → Validation → Execution
 
 ---
 
-# 3. High-Level System Architecture
+## Current Scope and Limitations
 
-```mermaid
-flowchart TD
+Phase 4 intentionally limits the system to:
 
-UserPrompt[User Prompt]
-
-Planner[LLM Planner]
-Validator[Plan Validator]
-
-Executor[Execution Engine]
-SQL[SQL Extraction]
-Preprocess[SPC Preprocessing]
-
-Plots[Plot Modules]
-Tables[Table Modules]
-
-Artifacts[Run Artifacts]
-
-UI[CLI / Streamlit]
-
-UserPrompt --> UI
-UI --> Planner
-Planner --> Validator
-Validator --> Executor
-
-Executor --> SQL
-SQL --> Preprocess
-
-Preprocess --> Plots
-Preprocess --> Tables
-
-Plots --> Artifacts
-Tables --> Artifacts
-
-Artifacts --> UI
-```
+- approved SQL templates and deterministic analytics modules  
+- recovery using the most recent successful run context  
+- replot workflows that reuse existing processed artifacts  
 
 ---
 
-# 4. Repository Structure
+## Planner and Executor Contract
 
-The project is organized by functional subsystem.
+The planner produces structured JSON plans.  
+The executor runs only registered deterministic modules.  
+Validation enforces the boundary.
+
+---
+
+# 3. Repository Structure
 
 ```
 deterministic-spc-agent
@@ -118,8 +418,7 @@ spc_agent/
     agent/
         agent_runner.py
         planner.py
-        planner_llm.py
-        planner_stub.py
+        planner_curated.py
         planner_prompt.py
         report_writer.py
 
@@ -142,317 +441,25 @@ planner/
     demo_gallery.json
     metadata/catalog.json
 
+data/
+	raw/
+		predictive_maintenance_v3.csv.zip       # Credit: Tatheer Abbas
+
 streamlit_app.py
 environment.yml
+requirements.txt    # deployment-only, used on the Streamlit branch
 ```
 
 ---
 
-# 5. Execution Workflow
-
-The core workflow converts a prompt into artifacts.
-
-```mermaid
-flowchart TD
-
-Prompt --> Planner
-Planner --> PlanJSON
-PlanJSON --> Validator
-
-Validator -->|execution plan| Executor
-Validator -->|replot plan| ReplotEngine
-Validator -->|unsupported| Exit
-
-Executor --> Artifacts
-ReplotEngine --> Artifacts
-
-Artifacts --> ReportWriter
-ReportWriter --> RunSummary
-```
-
----
-
-# 6. Planning System
-
-The planning system translates natural language into structured execution plans.
-
-Two planner backends exist.
-
-| Planner | Purpose |
-|------|------|
-LLM Planner | Natural-language interpretation |
-Stub Planner | Deterministic demo workflows |
-
----
-
-## Planner Workflow
-
-```mermaid
-sequenceDiagram
-
-User->>AgentRunner: Prompt
-AgentRunner->>Planner: generate_plan_from_prompt()
-
-Planner->>LLM: System prompt + user prompt
-LLM-->>Planner: JSON execution plan
-
-Planner->>AgentRunner: Parsed plan
-```
-
----
-
-# 7. Execution Engine
-
-The execution engine runs deterministic analytics workflows.
-
-Each job follows a fixed pipeline:
-
-```
-SQL extraction
-→ preprocessing
-→ output generation
-```
-
----
-
-## Execution Flow
-
-```mermaid
-flowchart TD
-
-Plan --> CreateRunDirectory
-CreateRunDirectory --> SQLQuery
-SQLQuery --> Preprocess
-Preprocess --> GenerateOutputs
-GenerateOutputs --> WriteArtifacts
-WriteArtifacts --> HashVerification
-```
-
----
-
-# 8. Job Structure
-
-Each job describes a single analytics workflow.
-
-Example job structure:
-
-```
-{
-  "job_id": "cpr11_vibration_status",
-  "sql_template": "entity_sensor_history",
-  "preprocess": "ewma_spc",
-  "filters": {
-    "entity_group": "CPR",
-    "entity": "CPR11",
-    "sensor": "vibration_rms"
-  },
-  "outputs": {
-    "plots": [
-      {
-        "plot": "spc_time_series",
-        "plot_name": "cpr11_vibration.png"
-      }
-    ]
-  }
-}
-```
-
----
-
-# 9. Replot System
-
-Replot allows users to modify outputs from a previous run without recomputing upstream steps.
-
-Replots reuse stored processed datasets.
-
-```
-processed_data.csv
-```
-
-Replot artifacts are stored under:
-
-```
-job/replots/<timestamp>/
-```
-
----
-
-## Replot Workflow
-
-```mermaid
-flowchart TD
-
-ReplotPlan --> ResolveRunReference
-ResolveRunReference --> LocateJobArtifacts
-LocateJobArtifacts --> LoadProcessedData
-LoadProcessedData --> GenerateOutputs
-GenerateOutputs --> WriteReplotArtifacts
-```
-
----
-
-# 10. Run Resolution System
-
-Replot plans may reference previous runs semantically.
-
-Supported references:
-
-```
-run_ref = "latest"
-```
-
-The system resolves this to the most recent run directory under:
-
-```
-runs/
-```
-
-The run lookup module handles semantic resolution.
-
----
-
-# 11. Artifact Model
-
-Each run produces a fully reproducible artifact directory.
-
-```
-runs/
-  2026-03-15T18-22-44/
-
-      run.json
-      run_summary.md
-      hash_manifest.json
-
-      job_1/
-          extracted_data.csv
-          processed_data.csv
-          plot.png
-          summary.csv
-```
-
-Artifacts enable:
-
-- reproducibility
-- auditability
-- experiment traceability
-
----
-
-# 12. Reporting System
-
-After execution, the system generates a Markdown report summarizing results.
-
-The report includes:
-
-- plots
-- tables
-- execution metadata
-- artifact references
-
-The Streamlit interface renders artifacts directly from the run directory.
-
----
-
-# 13. Setup Pipeline
+# 4. Setup Pipeline
 
 Initial setup prepares the analytics environment.
 
-The setup scripts perform two tasks:
-
-### Data initialization
-
+CLI:
 ```
-scripts/setup_data.py
+python -m spc_agent setup
 ```
 
-Creates:
-
-```
-data/mfg.duckdb
-```
-
-from the included dataset.
-
----
-
-### Planner catalog generation
-
-```
-scripts/build_planner_catalog.py
-```
-
-Generates the allow-list catalog used by the planner:
-
-```
-planner/metadata/catalog.json
-```
-
----
-
-# 14. User Interfaces
-
-The system supports two user interfaces.
-
----
-
-## CLI Interface
-
-Example:
-
-```
-python cli.py run "Plot 7 days of vibration data for ARM tools"
-```
-
----
-
-## Streamlit Interface
-
-The Streamlit application provides an interactive demo environment.
-
-Capabilities include:
-
-- prompt entry
-- artifact visualization
-- execution history
-- planner diagnostics
-
----
-
-# 15. Safety Model
-
-The architecture prevents unsafe execution through several guardrails.
-
-| Mechanism | Purpose |
-|------|------|
-Tool allow-lists | Prevent unapproved modules |
-Schema validation | Ensure correct plan structure |
-SQL templates | Prevent arbitrary SQL |
-Deterministic modules | Prevent arbitrary Python |
-
----
-
-# 16. Deterministic AI Architecture
-
-The system demonstrates a hybrid AI architecture.
-
-| Component | Role |
-|------|------|
-LLM | planning |
-Validator | guardrails |
-Execution engine | deterministic analytics |
-
-This pattern allows AI to interpret requests without allowing it to control execution.
-
----
-
-# 17. Summary
-
-The Deterministic SPC Agent demonstrates how large language models can be safely integrated into engineering analytics workflows.
-
-By combining:
-
-- natural language planning
-- strict validation
-- deterministic execution
-
-the system enables powerful analytics capabilities while preserving safety, reproducibility, and auditability.
+Streamlit:
+Setup runs automatically if initialization check fails.
