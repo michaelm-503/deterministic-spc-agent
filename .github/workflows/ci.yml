@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches:
+      - main
+      - phase-4
+      - dev
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   smoke-test:
