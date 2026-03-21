@@ -5,6 +5,7 @@ import random
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -18,10 +19,15 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("Deterministic SPC Agent")
-st.caption("Natural-language wrapper for prompt → plan → execute / replot → verify → summarize")
+# -----------------------------
+# Verbose Debugging
+# -----------------------------
 
+verbose = False
 
+# -----------------------------
+# Setup helpers
+# -----------------------------
 def check_setup(project_root: Path) -> tuple[bool, list[Path]]:
     required = [
         project_root / "data" / "mfg.duckdb",
@@ -62,6 +68,9 @@ def _default_project_root() -> str:
     return str(Path.cwd().resolve())
 
 
+# -----------------------------
+# Prompt helpers
+# -----------------------------
 def _load_demo_prompts(project_root: Path, planner_file: str) -> list[str]:
     planner_path = (project_root / planner_file).resolve() if not Path(planner_file).is_absolute() else Path(planner_file)
     if not planner_path.exists():
@@ -71,12 +80,111 @@ def _load_demo_prompts(project_root: Path, planner_file: str) -> list[str]:
     prompts = [str(run.get("request_text", "")).strip() for run in runs if run.get("request_text")]
     return [p for p in prompts if p]
 
+
 def _set_random_demo_prompt(demo_prompts: list[str]) -> None:
     if demo_prompts:
         st.session_state["prompt_input"] = random.choice(demo_prompts)
 
-def _collect_output_artifacts(result) -> tuple[list[Path], list[Path]]:
-    if result.run_dir is None:
+
+def _make_replot_prompt(builder_key: str) -> str:
+    prompts = {
+        "hide_legend": "Remove the legend from the last plot.",
+        "entity_filter": "Filter the last plot for <entity(s)>",
+        "last_3d": "Zoom in on the last 3 days.",
+        "last_7d": "Replot the previous result for the last 7 days.",
+        "add_ooc_summary_3d": "Add an OOC summary table for the last 3 days to the previous result.",
+        "boxplot_only": "Add a boxplot to the previous result.",
+    }
+    return prompts.get(builder_key, "")
+
+
+def _apply_replot_builder_prompt() -> None:
+    builder_key = st.session_state.get("replot_builder_choice")
+    prompt = _make_replot_prompt(builder_key)
+    if prompt:
+        st.session_state["prompt_input"] = prompt
+        st.session_state["force_json_upload"] = True
+
+
+# -----------------------------
+# Result / history helpers
+# -----------------------------
+def _extract_run_timestamp(result: Any) -> str:
+    if getattr(result, "run_dir", None):
+        return Path(result.run_dir).name
+    return "unsupported"
+
+
+def _extract_plan_jobs(plan: dict | None) -> list[dict]:
+    if not isinstance(plan, dict):
+        return []
+
+    if "jobs" in plan and isinstance(plan.get("jobs"), list):
+        return plan["jobs"]
+
+    runs = plan.get("runs", [])
+    if isinstance(runs, list) and runs:
+        first = runs[0]
+        if isinstance(first, dict) and isinstance(first.get("jobs"), list):
+            return first["jobs"]
+
+    return []
+
+
+def _extract_job_ids(plan: dict | None) -> list[str]:
+    jobs = _extract_plan_jobs(plan)
+    out = []
+    for job in jobs:
+        job_id = job.get("job_id")
+        if job_id:
+            out.append(str(job_id))
+    return out
+
+
+def _extract_run_json(plan: dict | None) -> str | None:
+    if not isinstance(plan, dict):
+        return None
+
+    # Replot / single-plan shape
+    if "jobs" in plan:
+        return json.dumps(plan, indent=2)
+
+    # Plan library shape
+    runs = plan.get("runs", [])
+    if isinstance(runs, list) and len(runs) == 1 and isinstance(runs[0], dict):
+        return json.dumps(runs[0], indent=2)
+
+    # Fallback: keep full plan if shape is still valid JSON
+    return json.dumps(plan, indent=2)
+
+
+def _selected_history_item() -> dict | None:
+    history = st.session_state.get("history", [])
+    idx = st.session_state.get("selected_history_index", 0)
+    if not history:
+        return None
+    if idx < 0 or idx >= len(history):
+        return history[0]
+    return history[idx]
+
+
+def _select_history_item(index: int) -> None:
+    st.session_state["selected_history_index"] = index
+    st.session_state["context_history_index"] = index
+    st.session_state["force_json_upload"] = True
+
+
+def _read_text_if_exists(path_str: str | None) -> str | None:
+    if not path_str:
+        return None
+    path = Path(path_str)
+    if path.exists() and path.is_file():
+        return path.read_text()
+    return None
+
+
+def _collect_output_artifacts(result: Any) -> tuple[list[Path], list[Path]]:
+    if getattr(result, "run_dir", None) is None:
         return [], []
 
     root = Path(result.run_dir)
@@ -98,90 +206,166 @@ def _collect_output_artifacts(result) -> tuple[list[Path], list[Path]]:
     return sorted(image_paths), sorted(table_paths)
 
 
-def _render_outputs(result) -> None:
+def _build_augmented_prompt(base_prompt: str, selected_item: dict | None, force_json_upload: bool) -> str:
+    prompt = base_prompt.strip()
+    if not force_json_upload or not selected_item:
+        return prompt
+
+    run_json = selected_item.get("run_json")
+    run_dir = getattr(selected_item.get("result"), "run_dir", None)
+    
+    if not run_json or not run_dir:
+        return prompt
+
+    return (
+        f"{prompt}\n\n"
+        f"Use this run_dir for replot requests: {run_dir}\n\n"
+        f"Previous execution run JSON:\n"
+        f"```json\n{run_json}\n```"
+    )
+
+
+def _mode_label(result: Any) -> str:
+    if getattr(result, "unsupported_request", False):
+        return "Unsupported"
+    plan = getattr(result, "plan", None)
+    if isinstance(plan, dict) and plan.get("mode") == "replot":
+        return "Replot"
+    return "Execution"
+
+
+def _sync_force_json_context() -> None:
+    history = st.session_state.get("history", [])
+    if st.session_state.get("force_json_upload"):
+        if st.session_state.get("context_history_index") is None and history:
+            st.session_state.context_history_index = 0
+    else:
+        st.session_state.context_history_index = None
+        
+        
+def _compute_active_context() -> dict | None:
+    history = st.session_state.get("history", [])
+    idx = st.session_state.get("context_history_index")
+
+    if idx is not None and history and 0 <= idx < len(history):
+        return history[idx]
+
+    return None
+
+
+# -----------------------------
+# Rendering
+# -----------------------------
+def _render_header() -> None:
+    c1, c2 = st.columns([3, 2])
+    with c1:
+        st.title("Deterministic SPC Agent")
+        st.caption("Deterministic SPC analytics powered by structured AI planning")
+    with c2:
+        st.markdown(
+            """
+<div style="text-align: right; margin-top: 1.0rem;">
+  <a href="https://github.com/michaelm-503/deterministic-spc-agent" target="_blank">GitHub</a>
+  &nbsp;•&nbsp;
+  <a href="https://github.com/michaelm-503/deterministic-spc-agent/tree/main/docs" target="_blank">Docs</a>
+  &nbsp;•&nbsp;
+  <a href="https://michaelm-503.github.io" target="_blank">About the author</a>
+</div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.divider()
+
+
+def _render_active_context(ctx: dict | None) -> None:
+    if not ctx:
+        return
+
+    timestamp = ctx.get("timestamp", "unknown")
+    mode = ctx.get("mode", "Execution")
+    job_ids = ctx.get("job_ids", [])
+
+    st.info(
+        f"Selected context: **{mode}** run `{timestamp}`"
+        + (f" | Jobs: `{', '.join(job_ids)}`" if job_ids else "")
+    )
+
+
+def _render_outputs(result: Any) -> None:
     image_paths, table_paths = _collect_output_artifacts(result)
 
-    if image_paths or table_paths:
-        st.subheader("Outputs")
+    if not image_paths and not table_paths:
+        return
+
+    st.subheader("Outputs")
 
     for image_path in image_paths:
-        st.image(str(image_path), caption=image_path.name, width='content')
-        st.caption(str(image_path))
+        st.image(str(image_path), caption=image_path.name, width="content")
 
     for table_path in table_paths:
         st.write(f"**{table_path.name}**")
         try:
             df = pd.read_csv(table_path)
-            st.dataframe(df, width='content')
+            st.dataframe(df, width="stretch")
         except Exception as e:
             st.warning(f"Could not load table {table_path.name}: {e}")
-        st.caption(str(table_path))
 
 
-def _read_text_if_exists(path_str: str | None):
-    if not path_str:
-        return None
-    path = Path(path_str)
-    if path.exists() and path.is_file():
-        return path.read_text()
-    return None
-
-
-def _render_result(result):
-    _render_outputs(result)
-
-    st.subheader("Artifacts")
-    if result.run_dir is not None:
-        st.write("**Artifact directory**")
-        st.code(str(result.run_dir))
-
-    if result.run_summary_path is not None:
-        st.write("**Summary artifact**")
-        st.code(str(result.run_summary_path))
-
-    if result.unsupported_request:
+def _render_result(result: Any) -> None:
+    if getattr(result, "unsupported_request", False):
         st.warning(f"Unsupported request: {result.unsupported_reason}")
 
-    if result.recovery_used:
+    if getattr(result, "recovery_used", False):
         st.info("Recovery pass used prior run context.")
-        if result.recovery_details:
-            with st.expander("Recovery details", expanded=False):
-                st.code(json.dumps(result.recovery_details, indent=2), language="json")
 
-    st.subheader("Diagnostics")
-    left, right = st.columns(2)
+    _render_outputs(result)
 
-    with left:
-        st.write("**Planner backend**")
-        st.code(result.planner_backend)
+    if getattr(result, "plan", None) is not None:
+        with st.expander("Final JSON plan", expanded=True):
+            st.code(json.dumps(result.plan, indent=2), language="json")
 
-        st.write("**Planner context**")
-        st.code(result.planner_context)
+    summary_text = _read_text_if_exists(str(getattr(result, "run_summary_path", None)))
+    if summary_text:
+        with st.expander("run_summary.md", expanded=False):
+            st.markdown(summary_text)
 
-        st.write("**Verification summary**")
-        st.code(result.verification_summary)
-
-    with right:
-        if result.plan is not None:
-            with st.expander("Final plan JSON", expanded=False):
-                st.code(json.dumps(result.plan, indent=2), language="json")
-
-        if result.planner_raw_output:
-            with st.expander("Planner raw output", expanded=False):
-                st.code(result.planner_raw_output, language="json")
-
-    if result.run_summary_path is not None:
-        summary_text = _read_text_if_exists(str(result.run_summary_path))
-        if summary_text:
-            with st.expander("Run Summary Markdown", expanded=False):
-                st.markdown(summary_text)
+    with st.expander("Run metadata", expanded=False):
+        st.write(f"**Mode:** {_mode_label(result)}")
+        st.write(f"**Planner backend:** {getattr(result, 'planner_backend', 'unknown')}")
+        if getattr(result, "planner_context", None):
+            st.write(f"**Planner context:** `{result.planner_context}`")
+        if getattr(result, "run_dir", None):
+            st.write(f"**Run directory:** `{result.run_dir}`")
+        if getattr(result, "verification_summary", None):
+            st.code(result.verification_summary)
 
 
+# -----------------------------
+# Session state init
+# -----------------------------
 if "history" not in st.session_state:
     st.session_state.history = []
+if "selected_history_index" not in st.session_state:
+    st.session_state.selected_history_index = 0
+if "context_history_index" not in st.session_state:
+    st.session_state.context_history_index = None
 if "prompt_input" not in st.session_state:
     st.session_state.prompt_input = ""
+if "force_json_upload" not in st.session_state:
+    st.session_state.force_json_upload = False
+if "reset_force_json_upload" not in st.session_state:
+    st.session_state.reset_force_json_upload = False
 
+    
+# -----------------------------
+# Header
+# -----------------------------
+_render_header()
+
+
+# -----------------------------
+# Sidebar
+# -----------------------------
 with st.sidebar:
     st.header("Configuration")
     project_root = st.text_input("Project root", value=_default_project_root())
@@ -189,8 +373,6 @@ with st.sidebar:
     planner_file = st.text_input("Planner file", value="planner/demo_gallery.json")
     model_name = st.text_input("LLM model", value="gpt-4.1")
     temperature = st.number_input("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
-    show_json = st.checkbox("Include executed plan in run_summary.md", value=False)
-    verbose = st.checkbox("Verbose server logs", value=False)
 
     project_root_path = Path(project_root).resolve()
     setup_ok, missing_paths = check_setup(project_root_path)
@@ -204,17 +386,37 @@ with st.sidebar:
             for p in missing_paths:
                 st.code(str(p))
 
-demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
+    st.divider()
+    st.subheader("Run History")
 
-col1, col2 = st.columns([4, 1])
-with col1:
-    prompt = st.text_area(
+    if not st.session_state.history:
+        st.caption("No prior runs yet.")
+    else:
+        for i, item in enumerate(st.session_state.history):
+            label = f"{item['timestamp']} | {item['mode']}"
+            if item["job_ids"]:
+                label += f" | {', '.join(item['job_ids'][:2])}"
+                if len(item["job_ids"]) > 2:
+                    label += "..."
+            if st.button(label, key=f"hist_{i}", use_container_width=True):
+                _select_history_item(i)
+
+
+# -----------------------------
+# Main controls
+# -----------------------------
+demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
+selected_item = _compute_active_context()
+
+col_prompt, col_demo = st.columns([3, 1])
+with col_prompt:
+    st.text_area(
         "Prompt",
         key="prompt_input",
         height=140,
         placeholder="Ask for an SPC plot, summary table, or replot modification...",
     )
-with col2:
+with col_demo:
     st.write("")
     st.write("")
     st.button(
@@ -223,11 +425,58 @@ with col2:
         on_click=_set_random_demo_prompt,
         args=(demo_prompts,),
     )
+    if st.session_state.history:
+        builder_choice = st.selectbox(
+            "Replot builder",
+            options=[
+                "Choose a helper...",
+                "hide_legend",
+                "entity_filter",
+                "last_3d",
+                "last_7d",
+                "add_ooc_summary_3d",
+                "boxplot_only",
+            ],
+            key="replot_builder_choice",
+            format_func=lambda x: {
+                "Choose a helper...": "Choose a helper...",
+                "hide_legend": "Hide legend",
+                "entity_filter": "Filter entities",
+                "last_3d": "Last 3 days",
+                "last_7d": "Last 7 days",
+                "add_ooc_summary_3d": "Add OOC summary - last 3 days",
+                "boxplot_only": "Add boxplot",
+            }[x],
+            on_change=_apply_replot_builder_prompt,
+        )
 
-run_clicked = st.button("Run Agent", type="primary", width='content')
+run_col, checkbox_col = st.columns([1, 2])
 
+with run_col:
+    run_clicked = st.button("Run Agent", type="primary", use_container_width=True)
+
+if st.session_state.get("reset_force_json_upload", False):
+    st.session_state.force_json_upload = False
+    st.session_state.context_history_index = None
+    st.session_state.reset_force_json_upload = False
+
+with checkbox_col:
+    st.checkbox(
+        "Force JSON upload with prompt",
+        key="force_json_upload",
+        help="The agent can determine when previous prompt information is necessary for a request. Checking this box forces the agent to send previous prompt information on the next request.",
+        on_change=_sync_force_json_context,
+    )
+
+active_context = _compute_active_context()
+_render_active_context(active_context)
+
+# -----------------------------
+# Run agent
+# -----------------------------
 if run_clicked:
-    if not st.session_state.prompt_input.strip():
+    prompt_text = st.session_state.prompt_input.strip()
+    if not prompt_text:
         st.error("Enter a prompt first.")
     else:
         project_root_path = Path(project_root).resolve()
@@ -242,39 +491,54 @@ if run_clicked:
             "temperature": float(temperature),
         }
 
+        final_prompt = _build_augmented_prompt(
+            base_prompt=prompt_text,
+            selected_item=selected_item,
+            force_json_upload=st.session_state.force_json_upload,
+        )
+
         try:
             with st.spinner("Running agent..."):
                 result = ask_agent(
-                    prompt=st.session_state.prompt_input.strip(),
+                    prompt=final_prompt,
                     project_root=project_root_path,
                     planner_backend=planner_backend,
                     planner_file=planner_file,
                     planner_config=planner_config,
-                    show_json=show_json,
+                    show_json=False,
                     verbose=verbose,
                 )
 
-            st.session_state.history.insert(
-                0,
-                {
-                    "prompt": st.session_state.prompt_input.strip(),
-                    "planner_backend": planner_backend,
-                    "result": result,
-                },
-            )
-
+            item = {
+                "prompt": prompt_text,
+                "submitted_prompt": final_prompt,
+                "planner_backend": planner_backend,
+                "timestamp": _extract_run_timestamp(result),
+                "job_ids": _extract_job_ids(getattr(result, "plan", None)),
+                "run_json": _extract_run_json(getattr(result, "plan", None)),
+                "mode": _mode_label(result),
+                "result": result,
+            }
+            st.session_state.history.insert(0, item)
+            st.session_state.selected_history_index = 0
+            st.session_state.context_history_index = None
+            st.session_state.reset_force_json_upload = True
+            st.rerun()
+            
         except Exception as e:
             st.exception(e)
 
-if st.session_state.history:
-    latest = st.session_state.history[0]
-    st.subheader("Latest Run")
-    st.write(f"**Prompt:** {latest['prompt']}")
-    _render_result(latest["result"])
 
-    with st.expander("History", expanded=False):
-        for i, item in enumerate(st.session_state.history[1:], start=2):
-            st.markdown(f"### Run {i}")
-            st.write(f"**Prompt:** {item['prompt']}")
-            _render_result(item["result"])
-            st.divider()
+# -----------------------------
+# Current viewer
+# -----------------------------
+current = _selected_history_item()
+if current:
+    st.subheader("Current View")
+    st.write(f"**Prompt:** {current['prompt']}")
+    if current["submitted_prompt"] != current["prompt"]:
+        with st.expander("Submitted prompt with embedded run JSON context", expanded=False):
+            st.code(current["submitted_prompt"])
+    _render_result(current["result"])
+else:
+    st.info("Run the agent or select a previous run from the sidebar to view artifacts.")
