@@ -554,7 +554,7 @@ with tab_agent:
 with tab_dataset:
     st.header("About This Dataset")
 
-    dataset_path = Path(project_root).resolve() / "docs" / "dataset.md"
+    dataset_path = Path(project_root).resolve() / "dataset.md"
     dataset_md = _load_markdown_file(dataset_path)
 
     st.markdown(dataset_md)
