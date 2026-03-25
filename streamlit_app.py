@@ -4,6 +4,7 @@ import json
 import random
 import subprocess
 import sys
+import re
 from pathlib import Path
 from typing import Any
 
@@ -36,10 +37,6 @@ def check_setup(project_root: Path) -> tuple[bool, list[Path]]:
     missing = [p for p in required if not p.exists()]
     return (len(missing) == 0, missing)
 
-def _load_markdown_file(path: Path) -> str:
-    if path.exists():
-        return path.read_text()
-    return f"File not found: {path}"
 
 def ensure_setup(project_root: Path) -> tuple[bool, str]:
     ok, missing = check_setup(project_root)
@@ -71,6 +68,44 @@ def ensure_setup(project_root: Path) -> tuple[bool, str]:
 def _default_project_root() -> str:
     return str(Path.cwd().resolve())
 
+
+# -----------------------------
+# UI helpers
+# -----------------------------
+def _load_markdown_file(path: Path) -> str:
+    if path.exists():
+        return path.read_text()
+    return f"File not found: {path}"    
+
+
+def _render_markdown_with_local_images(md_path: Path) -> None:
+    if not md_path.exists():
+        st.warning(f"File not found: {md_path}")
+        return
+
+    text = md_path.read_text()
+    lines = text.splitlines()
+
+    image_pattern = re.compile(r'!\[.*?\]\((.*?)\)')
+    markdown_lines: list[str] = []
+
+    for line in lines:
+        match = image_pattern.search(line)
+        if match:
+            raw_path = match.group(1).strip()
+            image_path = (md_path.parent / raw_path).resolve()
+
+            if image_path.exists():
+                st.image(str(image_path))
+            else:
+                st.warning(f"Image not found: {raw_path}")
+        else:
+            markdown_lines.append(line)
+
+    markdown_text = "\n".join(markdown_lines).strip()
+    if markdown_text:
+        st.markdown(markdown_text)
+    
 
 # -----------------------------
 # Prompt helpers
@@ -552,16 +587,12 @@ with tab_agent:
 # Dataset Tab
 # -----------------------------
 with tab_dataset:
-    dataset_path = Path(project_root).resolve() / "dataset.md"
-    dataset_md = _load_markdown_file(dataset_path)
-
-    st.markdown(dataset_md)
+    dataset_path = Path(project_root).resolve() / "docs" / "dataset.md"
+    _render_markdown_with_local_images(dataset_path)
 
 # -----------------------------
 # README Tab
 # -----------------------------
 with tab_project:
     readme_path = Path(project_root).resolve() / "README.md"
-    readme_md = _load_markdown_file(readme_path)
-
-    st.markdown(readme_md)
+    _render_markdown_with_local_images(readme_path)
