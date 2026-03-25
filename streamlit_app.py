@@ -36,6 +36,10 @@ def check_setup(project_root: Path) -> tuple[bool, list[Path]]:
     missing = [p for p in required if not p.exists()]
     return (len(missing) == 0, missing)
 
+def _load_markdown_file(path: Path) -> str:
+    if path.exists():
+        return path.read_text()
+    return f"File not found: {path}"
 
 def ensure_setup(project_root: Path) -> tuple[bool, str]:
     ok, missing = check_setup(project_root)
@@ -264,13 +268,9 @@ def _render_header() -> None:
     with c2:
         st.markdown(
             """
-<div style="text-align: right; margin-top: 1.0rem;">
-  <a href="https://github.com/michaelm-503/deterministic-spc-agent" target="_blank">GitHub</a>
-  &nbsp;•&nbsp;
-  <a href="https://github.com/michaelm-503/deterministic-spc-agent/tree/main/docs" target="_blank">Docs</a>
-  &nbsp;•&nbsp;
-  <a href="https://michaelm-503.github.io" target="_blank">About the author</a>
-</div>
+<a href="https://github.com/michaelm-503/deterministic-spc-agent" target="_blank">GitHub Home</a>
+&nbsp;•&nbsp;
+<a href="https://michaelm-503.github.io" target="_blank">About the Author</a>
             """,
             unsafe_allow_html=True,
         )
@@ -362,183 +362,210 @@ if "reset_force_json_upload" not in st.session_state:
 # -----------------------------
 _render_header()
 
+tab_agent, tab_dataset, tab_project = st.tabs(
+    ["Agent", "About This Dataset", "About This Project"]
+)
 
-# -----------------------------
-# Sidebar
-# -----------------------------
-with st.sidebar:
-    st.header("Configuration")
-    project_root = st.text_input("Project root", value=_default_project_root())
-    planner_backend = st.selectbox("Planner backend", options=["auto", "llm", "curated"], index=0)
-    planner_file = st.text_input("Planner file", value="planner/demo_gallery.json")
-    model_name = st.text_input("LLM model", value="gpt-4.1")
-    temperature = st.number_input("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
-
-    project_root_path = Path(project_root).resolve()
-    setup_ok, missing_paths = check_setup(project_root_path)
-
-    st.divider()
-    if setup_ok:
-        st.success("Project artifacts ready.")
-    else:
-        st.warning("Project artifacts missing. They will be built automatically on first run.")
-        with st.expander("Missing artifacts"):
-            for p in missing_paths:
-                st.code(str(p))
-
-    st.divider()
-    st.subheader("Run History")
-
-    if not st.session_state.history:
-        st.caption("No prior runs yet.")
-    else:
-        for i, item in enumerate(st.session_state.history):
-            label = f"{item['timestamp']} | {item['mode']}"
-            if item["job_ids"]:
-                label += f" | {', '.join(item['job_ids'][:2])}"
-                if len(item["job_ids"]) > 2:
-                    label += "..."
-            if st.button(label, key=f"hist_{i}", use_container_width=True):
-                _select_history_item(i)
-
-
-# -----------------------------
-# Main controls
-# -----------------------------
-demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
-selected_item = _compute_active_context()
-
-col_prompt, col_demo = st.columns([3, 1])
-with col_prompt:
-    st.text_area(
-        "Prompt",
-        key="prompt_input",
-        height=140,
-        placeholder="Ask for an SPC plot, summary table, or replot modification...",
-    )
-with col_demo:
-    st.write("")
-    st.write("")
-    st.button(
-        "Random Demo Prompt",
-        use_container_width=True,
-        on_click=_set_random_demo_prompt,
-        args=(demo_prompts,),
-    )
-    if st.session_state.history:
-        builder_choice = st.selectbox(
-            "Replot builder",
-            options=[
-                "Choose a helper...",
-                "hide_legend",
-                "entity_filter",
-                "last_3d",
-                "last_7d",
-                "add_ooc_summary_3d",
-                "boxplot_only",
-            ],
-            key="replot_builder_choice",
-            format_func=lambda x: {
-                "Choose a helper...": "Choose a helper...",
-                "hide_legend": "Hide legend",
-                "entity_filter": "Filter entities",
-                "last_3d": "Last 3 days",
-                "last_7d": "Last 7 days",
-                "add_ooc_summary_3d": "Add OOC summary - last 3 days",
-                "boxplot_only": "Add boxplot",
-            }[x],
-            on_change=_apply_replot_builder_prompt,
-        )
-
-run_col, checkbox_col = st.columns([1, 2])
-
-with run_col:
-    run_clicked = st.button("Run Agent", type="primary", use_container_width=True)
-
-if st.session_state.get("reset_force_json_upload", False):
-    st.session_state.force_json_upload = False
-    st.session_state.context_history_index = None
-    st.session_state.reset_force_json_upload = False
-
-with checkbox_col:
-    st.checkbox(
-        "Force JSON upload with prompt",
-        key="force_json_upload",
-        help="The agent can determine when previous prompt information is necessary for a request. Checking this box forces the agent to send previous prompt information on the next request.",
-        on_change=_sync_force_json_context,
-    )
-
-active_context = _compute_active_context()
-_render_active_context(active_context)
-
-# -----------------------------
-# Run agent
-# -----------------------------
-if run_clicked:
-    prompt_text = st.session_state.prompt_input.strip()
-    if not prompt_text:
-        st.error("Enter a prompt first.")
-    else:
+with tab_agent:
+    # -----------------------------
+    # Sidebar
+    # -----------------------------
+    with st.sidebar:
+        st.header("Configuration")
+        project_root = st.text_input("Project root", value=_default_project_root())
+        planner_backend = st.selectbox("Planner backend", options=["auto", "llm", "curated"], index=0)
+        planner_file = st.text_input("Planner file", value="planner/demo_gallery.json")
+        model_name = st.text_input("LLM model", value="gpt-4.1")
+        temperature = st.number_input("Temperature", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
+    
         project_root_path = Path(project_root).resolve()
-
-        setup_ok, setup_msg = ensure_setup(project_root_path)
-        if not setup_ok:
-            st.error(setup_msg)
-            st.stop()
-
-        planner_config = {
-            "model": model_name,
-            "temperature": float(temperature),
-        }
-
-        final_prompt = _build_augmented_prompt(
-            base_prompt=prompt_text,
-            selected_item=selected_item,
-            force_json_upload=st.session_state.force_json_upload,
+        setup_ok, missing_paths = check_setup(project_root_path)
+    
+        st.divider()
+        if setup_ok:
+            st.success("Project artifacts ready.")
+        else:
+            st.warning("Project artifacts missing. They will be built automatically on first run.")
+            with st.expander("Missing artifacts"):
+                for p in missing_paths:
+                    st.code(str(p))
+    
+        st.divider()
+        st.subheader("Run History")
+    
+        if not st.session_state.history:
+            st.caption("No prior runs yet.")
+        else:
+            for i, item in enumerate(st.session_state.history):
+                label = f"{item['timestamp']} | {item['mode']}"
+                if item["job_ids"]:
+                    label += f" | {', '.join(item['job_ids'][:2])}"
+                    if len(item["job_ids"]) > 2:
+                        label += "..."
+                if st.button(label, key=f"hist_{i}", use_container_width=True):
+                    _select_history_item(i)
+    
+    
+    # -----------------------------
+    # Main controls
+    # -----------------------------
+    demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
+    selected_item = _compute_active_context()
+    
+    col_prompt, col_demo = st.columns([3, 1])
+    with col_prompt:
+        st.caption("New here? Check the 'About This Dataset' tab to explore entities, sensors, and example workflows.")
+        st.text_area(
+            "Prompt",
+            key="prompt_input",
+            height=140,
+            placeholder="Ask for an SPC plot, summary table, or replot modification...",
         )
-
-        try:
-            with st.spinner("Running agent..."):
-                result = ask_agent(
-                    prompt=final_prompt,
-                    project_root=project_root_path,
-                    planner_backend=planner_backend,
-                    planner_file=planner_file,
-                    planner_config=planner_config,
-                    show_json=False,
-                    verbose=verbose,
-                )
-
-            item = {
-                "prompt": prompt_text,
-                "submitted_prompt": final_prompt,
-                "planner_backend": planner_backend,
-                "timestamp": _extract_run_timestamp(result),
-                "job_ids": _extract_job_ids(getattr(result, "plan", None)),
-                "run_json": _extract_run_json(getattr(result, "plan", None)),
-                "mode": _mode_label(result),
-                "result": result,
+    with col_demo:
+        st.write("")
+        st.write("")
+        st.button(
+            "Random Demo Prompt",
+            use_container_width=True,
+            on_click=_set_random_demo_prompt,
+            args=(demo_prompts,),
+        )
+        if st.session_state.history:
+            builder_choice = st.selectbox(
+                "Replot builder",
+                options=[
+                    "Choose a helper...",
+                    "hide_legend",
+                    "entity_filter",
+                    "last_3d",
+                    "last_7d",
+                    "add_ooc_summary_3d",
+                    "boxplot_only",
+                ],
+                key="replot_builder_choice",
+                format_func=lambda x: {
+                    "Choose a helper...": "Choose a helper...",
+                    "hide_legend": "Hide legend",
+                    "entity_filter": "Filter entities",
+                    "last_3d": "Last 3 days",
+                    "last_7d": "Last 7 days",
+                    "add_ooc_summary_3d": "Add OOC summary - last 3 days",
+                    "boxplot_only": "Add boxplot",
+                }[x],
+                on_change=_apply_replot_builder_prompt,
+            )
+    
+    run_col, checkbox_col = st.columns([1, 2])
+    
+    with run_col:
+        run_clicked = st.button("Run Agent", type="primary", use_container_width=True)
+    
+    if st.session_state.get("reset_force_json_upload", False):
+        st.session_state.force_json_upload = False
+        st.session_state.context_history_index = None
+        st.session_state.reset_force_json_upload = False
+    
+    with checkbox_col:
+        st.checkbox(
+            "Force JSON upload with prompt",
+            key="force_json_upload",
+            help="The agent can determine when previous prompt information is necessary for a request. Checking this box forces the agent to send previous prompt information on the next request.",
+            on_change=_sync_force_json_context,
+        )
+    
+    active_context = _compute_active_context()
+    _render_active_context(active_context)
+    
+    # -----------------------------
+    # Run agent
+    # -----------------------------
+    if run_clicked:
+        prompt_text = st.session_state.prompt_input.strip()
+        if not prompt_text:
+            st.error("Enter a prompt first.")
+        else:
+            project_root_path = Path(project_root).resolve()
+    
+            setup_ok, setup_msg = ensure_setup(project_root_path)
+            if not setup_ok:
+                st.error(setup_msg)
+                st.stop()
+    
+            planner_config = {
+                "model": model_name,
+                "temperature": float(temperature),
             }
-            st.session_state.history.insert(0, item)
-            st.session_state.selected_history_index = 0
-            st.session_state.context_history_index = None
-            st.session_state.reset_force_json_upload = True
-            st.rerun()
-            
-        except Exception as e:
-            st.exception(e)
-
+    
+            final_prompt = _build_augmented_prompt(
+                base_prompt=prompt_text,
+                selected_item=selected_item,
+                force_json_upload=st.session_state.force_json_upload,
+            )
+    
+            try:
+                with st.spinner("Running agent..."):
+                    result = ask_agent(
+                        prompt=final_prompt,
+                        project_root=project_root_path,
+                        planner_backend=planner_backend,
+                        planner_file=planner_file,
+                        planner_config=planner_config,
+                        show_json=False,
+                        verbose=verbose,
+                    )
+    
+                item = {
+                    "prompt": prompt_text,
+                    "submitted_prompt": final_prompt,
+                    "planner_backend": planner_backend,
+                    "timestamp": _extract_run_timestamp(result),
+                    "job_ids": _extract_job_ids(getattr(result, "plan", None)),
+                    "run_json": _extract_run_json(getattr(result, "plan", None)),
+                    "mode": _mode_label(result),
+                    "result": result,
+                }
+                st.session_state.history.insert(0, item)
+                st.session_state.selected_history_index = 0
+                st.session_state.context_history_index = None
+                st.session_state.reset_force_json_upload = True
+                st.rerun()
+                
+            except Exception as e:
+                st.exception(e)
+    
+    
+    # -----------------------------
+    # Current viewer
+    # -----------------------------
+    current = _selected_history_item()
+    if current:
+        st.subheader("Current View")
+        st.write(f"**Prompt:** {current['prompt']}")
+        if current["submitted_prompt"] != current["prompt"]:
+            with st.expander("Submitted prompt with embedded run JSON context", expanded=False):
+                st.code(current["submitted_prompt"])
+        _render_result(current["result"])
+    else:
+        st.info("Run the agent or select a previous run from the sidebar to view artifacts.")
 
 # -----------------------------
-# Current viewer
+# Dataset Tab
 # -----------------------------
-current = _selected_history_item()
-if current:
-    st.subheader("Current View")
-    st.write(f"**Prompt:** {current['prompt']}")
-    if current["submitted_prompt"] != current["prompt"]:
-        with st.expander("Submitted prompt with embedded run JSON context", expanded=False):
-            st.code(current["submitted_prompt"])
-    _render_result(current["result"])
-else:
-    st.info("Run the agent or select a previous run from the sidebar to view artifacts.")
+with tab_dataset:
+    st.header("About This Dataset")
+
+    dataset_path = Path(project_root).resolve() / "docs" / "dataset.md"
+    dataset_md = _load_markdown_file(dataset_path)
+
+    st.markdown(dataset_md)
+
+# -----------------------------
+# README Tab
+# -----------------------------
+with tab_project:
+    st.header("About This Project")
+
+    readme_path = Path(project_root).resolve() / "README.md"
+    readme_md = _load_markdown_file(readme_path)
+
+    st.markdown(readme_md)
