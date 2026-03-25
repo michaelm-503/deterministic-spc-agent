@@ -18,6 +18,8 @@ This architecture demonstrates how AI can safely support engineering analysis wh
 
 [https://deterministic-spc-agent.streamlit.app/](https://deterministic-spc-agent.streamlit.app/)
 
+Use the `Random Demo Prompt` button or try your own prompt and press `Run Agent`.
+
 ---
 
 # Why Does This Exist?
