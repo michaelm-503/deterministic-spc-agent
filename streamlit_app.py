@@ -552,8 +552,6 @@ with tab_agent:
 # Dataset Tab
 # -----------------------------
 with tab_dataset:
-    st.header("About This Dataset")
-
     dataset_path = Path(project_root).resolve() / "dataset.md"
     dataset_md = _load_markdown_file(dataset_path)
 
@@ -563,8 +561,6 @@ with tab_dataset:
 # README Tab
 # -----------------------------
 with tab_project:
-    st.header("About This Project")
-
     readme_path = Path(project_root).resolve() / "README.md"
     readme_md = _load_markdown_file(readme_path)
 
