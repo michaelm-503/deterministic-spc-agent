@@ -28,9 +28,8 @@ I[Recovery / Context Pass]
 
 J[Replot]
 
-K[Hash Manifest + Verification (optional)]
+K[Hash Manifest + Verification]
 
-L[Unsupported Request]
 
 A --> B
 B --> C
@@ -42,12 +41,10 @@ G --> H
 H --> K
 
 C <--> I
-H --> J
-J --> H
+H <--> J
+
 J --> K
 
-C --> L
-I --> L
 ```
 
 ---
