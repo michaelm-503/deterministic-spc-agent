@@ -5,10 +5,10 @@ This artifical [dataset](README.md#license) covers 14 days for a fleet of four e
 
 | Entity Group | Description | Entities |
 |--------------|-------------|----------|
-| CNC          | CNC         | CNC01<br />CNC02<br />CNC03<br />CNC04<br />CNC05   |
-| PMP          | Pump        | PMP06<br />PMP07<br />PMP08<br />PMP09<br />PMP10   |
-| CPR          | Compressor  | CPR11<br />CPR12<br />CPR13<br />CPR14<br />CNC15   |
-| ARM          | Robotic Arm | ARM16<br />ARM17<br />ARM18<br />ARM19<br />ARM20   |
+| CNC          | CNC         | CNC01, CNC02, CNC03, CNC04, CNC05   |
+| PMP          | Pump        | PMP06, PMP07, PMP08, PMP09, PMP10   |
+| CPR          | Compressor  | CPR11, CPR12, CPR13, CPR14, CNC15   |
+| ARM          | Robotic Arm | ARM16, ARM17, ARM18, ARM19, ARM20   |
 
 Each entity has six defined sensors:
 ```
