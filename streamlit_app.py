@@ -5,6 +5,8 @@ import random
 import subprocess
 import sys
 import re
+import base64
+import mimetypes
 from pathlib import Path
 from typing import Any
 
@@ -78,33 +80,42 @@ def _load_markdown_file(path: Path) -> str:
     return f"File not found: {path}"    
 
 
-def _render_markdown_with_local_images(md_path: Path) -> None:
+
+def _markdown_with_embedded_local_images(md_path: Path) -> str:
+    """
+    Load markdown and replace local image links with base64 data URIs
+    so that st.markdown() can render them inline.
+
+    Remote image URLs are left unchanged.
+    """
     if not md_path.exists():
-        st.warning(f"File not found: {md_path}")
-        return
+        return f"File not found: {md_path}"
 
     text = md_path.read_text()
-    lines = text.splitlines()
+    image_pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
 
-    image_pattern = re.compile(r'!\[.*?\]\((.*?)\)')
-    markdown_lines: list[str] = []
+    def _replace(match: re.Match) -> str:
+        alt_text = match.group(1)
+        raw_path = match.group(2).strip()
 
-    for line in lines:
-        match = image_pattern.search(line)
-        if match:
-            raw_path = match.group(1).strip()
-            image_path = (md_path.parent / raw_path).resolve()
+        # Leave remote images alone
+        if raw_path.startswith("http://") or raw_path.startswith("https://"):
+            return match.group(0)
 
-            if image_path.exists():
-                st.image(str(image_path))
-            else:
-                st.warning(f"Image not found: {raw_path}")
-        else:
-            markdown_lines.append(line)
+        image_path = (md_path.parent / raw_path).resolve()
+        if not image_path.exists():
+            return match.group(0)
 
-    markdown_text = "\n".join(markdown_lines).strip()
-    if markdown_text:
-        st.markdown(markdown_text)
+        mime_type, _ = mimetypes.guess_type(str(image_path))
+        if mime_type is None or not mime_type.startswith("image/"):
+            return match.group(0)
+
+        encoded = base64.b64encode(image_path.read_bytes()).decode("utf-8")
+        data_uri = f"data:{mime_type};base64,{encoded}"
+
+        return f"![{alt_text}]({data_uri})"
+
+    return image_pattern.sub(_replace, text)
     
 
 # -----------------------------
@@ -446,10 +457,10 @@ with tab_agent:
     # -----------------------------
     demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
     selected_item = _compute_active_context()
-    
+
+    st.caption("New here? Try 'Random Demo Prompt' for a pre-built prompt or check the 'About This Dataset' tab to explore the data and write your own!")
     col_prompt, col_demo = st.columns([3, 1])
     with col_prompt:
-        st.caption("New here? Check the 'About This Dataset' tab to explore entities, sensors, and example workflows.")
         st.text_area(
             "Prompt",
             key="prompt_input",
@@ -587,12 +598,14 @@ with tab_agent:
 # Dataset Tab
 # -----------------------------
 with tab_dataset:
-    dataset_path = Path(project_root).resolve() / "docs" / "dataset.md"
-    _render_markdown_with_local_images(dataset_path)
+    dataset_path = Path(project_root).resolve() / "dataset.md"
+    dataset_md = _markdown_with_embedded_local_images(dataset_path)
+    st.markdown(dataset_md, unsafe_allow_html=True)
 
 # -----------------------------
 # README Tab
 # -----------------------------
 with tab_project:
     readme_path = Path(project_root).resolve() / "README.md"
-    _render_markdown_with_local_images(readme_path)
+    readme_md = _markdown_with_embedded_local_images(readme_path)
+    st.markdown(readme_md, unsafe_allow_html=True)
