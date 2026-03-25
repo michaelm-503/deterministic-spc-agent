@@ -101,7 +101,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     else:
         run_plan = plan_or_lib
 
-    run_dir = run_one_run(run_plan, root)
+    run_dir = run_one_run(run_plan, root, write_hashes=True)
     print(f"✅ Run executed: {run_dir}")
     return 0
 
@@ -159,7 +159,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     pa = sub.add_parser("ask", help="Run the natural-language planner/executor flow.")
     pa.add_argument("prompt", help="Natural-language request.")
-    pa.add_argument("--planner-backend", default="auto", choices=["auto", "llm", "stub"])
+    pa.add_argument("--planner-backend", default="auto", choices=["auto", "llm", "curated"])
     pa.add_argument("--planner-file", default="planner/demo_gallery.json")
     pa.add_argument("--model", default="gpt-4.1")
     pa.add_argument("--temperature", type=float, default=0.0)

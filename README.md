@@ -1,6 +1,6 @@
 # Deterministic SPC Agent
 
-A guardrailed AI system that converts natural-language requests into **deterministic manufacturing analytics workflows**.
+A guardrailed AI system that converts natural-language requests into **deterministic, reproducible manufacturing analytics workflows**.
 
 Instead of allowing an LLM to generate executable code, the system uses the LLM only as a **planner** that produces structured execution plans. Those plans are validated and executed by a deterministic analytics engine.
 
@@ -14,22 +14,15 @@ This architecture demonstrates how AI can safely support engineering analysis wh
 
 ---
 
-# Documentation
+#  Try it live
 
-Detailed documentation is available in the `docs/` directory:
-
-- [`architecture.md`](docs/architecture.md)
-- [`cli.md`](docs/cli.md)
-- [`demo_gallery.md`](docs/demo_gallery.md)
-- [`developer_guide.md`](docs/developer_guide.md)
-- [`planner_schema.md`](docs/planner_schema.md)
-- [`verification.md`](docs/verification.md)
+[https://deterministic-spc-agent.streamlit.app/](https://deterministic-spc-agent.streamlit.app/)
 
 ---
 
 # Why Does This Exist?
 
-Large manufacturing facilities may contain **thousands of equipment fleets**, each with **hundreds of sensors or health indicators**. Engineers rely on **Statistical Process Control (SPC)** and time-series analysis to detect:
+Large manufacturing facilities may contain thousands of equipment fleets, each with hundreds of sensors or health indicators. Engineers rely on Statistical Process Control (SPC) and time-series analysis to detect:
 
 - equipment degradation  
 - abnormal process behavior  
@@ -52,65 +45,22 @@ AI systems promise to accelerate this process, but naïve approaches that allow 
 
 ---
 
-# Demo
+# Key idea #1: Deterministic AI
 
+The LLM does **not** generate executable code.
 
-A full version of **Determininstic SPC Agent** is available on StreamLit:
+It produces a **structured execution plan**:
 
-[https://deterministic-spc-agent.streamlit.app/](https://deterministic-spc-agent.streamlit.app/).
+1. Schema-validated  
+2. Restricted to approved modules  
+3. Executed deterministically  
+4. Stored as reproducible artifacts  
 
-The demo allows users to submit natural-language prompts and observe the generated execution plans and analytics artifacts.
-
-**Example prompt:**
-
->CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is it doing now?
-
-**Planner output:**
-
-```
-{
-  "runs": [
-    {
-      "run_id": "demo_cpr11_health_check",
-      "request_text": "CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?",
-      "jobs": [
-        {
-          "job_id": "CPR11_temperature_motor",
-          "sql_template": "entity_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": "CPR11",
-            "sensor": "temperature_motor",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "spc_time_series",
-                "plot_name": "cpr11_temperature_motor_spc.png"
-              }
-            ]
-          }
-        }, ...
-      ]
-    }
-  ]
-}
-```
-
-**Workflow output:**
-- Two SPC plots
-- Processed datasets 
-- `run.json` execution plan  
-- Hash verification output
-
-![Image](assets/CPR11_demo.png)
+Rerunning the same request — even if phrased slightly differently — resolves to the same structured execution plan and deterministic workflow. This ensures reproducibility and builds trust in engineering analysis.
 
 ---
 
-# Replot Workflow
+# Key idea #2: Replot Workflow
 
 Users can modify previous analyses without rerunning the full pipeline.
 
@@ -128,78 +78,111 @@ This allows interactive analysis while preserving reproducibility.
 
 ---
 
-# Key Idea: Deterministic AI
+# Key idea #3: Recovery-Based Planning
 
-Instead of generating code, the LLM produces **structured execution plans**.
+For conversational follow-ups, the system may use prior context to recover missing intent.
 
-The system then:
+Instead of failing immediately, the planner:
+- references previous runs
+- infers missing filters or entities
+- generates a valid execution plan when possible
 
-1. validates the plan against a schema  
-2. restricts execution to approved analytics modules  
-3. executes deterministic workflows  
-4. records reproducible artifacts  
+This allows natural, iterative workflows while maintaining deterministic execution.
 
-This design combines:
+---
 
-- **AI usability**
-- **engineering reliability**
+# Key idea #4: Planner Modes
 
-Importantly, the LLM is responsible only for **interpreting the request**.
+The system supports multiple planning strategies:
 
-Execution itself is deterministic.
+- **curated** — exact-match prompts map to predefined execution plans  
+- **llm** — LLM generates structured plans for novel queries  
+- **auto** — attempts curated first, then falls back to LLM  
 
-Rerunning the same request — even if phrased slightly differently — resolves to the same structured execution plan and deterministic workflow. This ensures reproducibility and builds trust in engineering analysis.
+This design enables:
+- deterministic handling of known workflows  
+- flexible handling of novel requests  
+- graceful degradation when intent is unclear  
 
 ---
 
 # Example Workflow
 
-Prompt:
+**Example prompt:**
 
 > Plot 7 days of vibration data for ARM tools.
 
-Execution pipeline:
-
+**Planner output:**
 ```
-Prompt
-→ LLM planner
-→ schema validation
-→ deterministic execution
-→ artifact generation
-→ report summarization
+{
+  "run_id": "arm_vibration_7d",
+  "request_text": "Plot 7 days of vibration data for ARM tools.",
+  "jobs": [
+    {
+      "job_id": "arm_vibration_7d",
+      "sql_template": "fleet_sensor_history",
+      "preprocess": "ewma_spc",
+      "filters": {
+        "entity_group": "ARM",
+        "entity": null,
+        "sensor": "vibration_rms",
+        "start_ts": "2024-01-08T00:00:00",
+        "end_ts": "2024-01-15T00:00:00"
+      },
+      "outputs": {
+        "plots": [
+          {
+            "plot": "fleet_time_trend",
+            "plot_name": "arm_vibration_7d.png"
+          }
+        ]
+      }
+    }
+  ]
+}
 ```
 
-Each run produces a reproducible artifact directory containing:
+**Workflow output:**
 
-- execution plan  
-- extracted data  
-- processed datasets  
-- generated plots  
-- summary tables  
-- verification hashes  
+![Image](assets/arm_vibration_7d.png)
+
+Stored artifacts:
+- Generated outputs (plots & summary tables)
+- Processed datasets  
+- `run.json` execution plan  
+- Hash manifest (`hashes.json`) for reproducibility and verification  
+
 
 ---
 
 # Architecture
+
+The system includes a recovery loop that uses prior run context to resolve incomplete or ambiguous follow-up requests before failing.
 
 ```mermaid
 flowchart TD
 
 A[User Question]
 
-B[LLM Planner<br/>Converts request to structured JSON]
+B[Routing Layer<br/>planner selection + recovery]
 
-C[Schema Validation]
+C[Planner<br/>Structured JSON]
 
-D[SQL Execution<br/>from Template]
+D[Schema Validation]
 
-E[Deterministic<br/>Preprocessing]
+E[SQL Execution]
 
-F[Plot / Table Generation]
+F[Deterministic Preprocessing]
 
-G[Run Artifacts<br/>Hashing + Verification]
+G[Plot / Table Generation]
 
-H[Replot<br/>Visual-only adjustments]
+H[Run Artifacts]
+
+I[Recovery / Context Pass]
+
+J[Replot]
+
+K[Hashing + Verification]
 
 A --> B
 B --> C
@@ -208,7 +191,11 @@ D --> E
 E --> F
 F --> G
 G --> H
-H --> G
+H --> K
+
+C <--> I
+H --> J
+J --> H
 ```
 
 Full architecture documentation:  
@@ -216,44 +203,25 @@ Full architecture documentation:
 
 ---
 
-# Running Locally
+# CLI Usage
 
-Create the environment:
-
-```bash
-conda env create -f environment.yml
-conda activate agentic_mfg
+The system can also be used programmatically:
 ```
-
-Launch the Streamlit interface:
-
-```bash
-streamlit run streamlit_app.py
+python -m spc_agent setup
+python -m spc_agent ask "Plot 7 days of vibration data for ARM tools."
 ```
-
-Example prompt:
-
-```
-Plot 7 days of vibration data for ARM tools.
-```
-
 ---
 
-# Repository Structure
+# Documentation
 
-```
-spc_agent/
-    agent/          # LLM planning + orchestration
-runner/             # deterministic execution engine
-plots/              # visualization modules
-tables/             # summary outputs
-preprocess/         # SPC preprocessing
-sql/                # query templates
+Detailed documentation is available in the `docs/` directory:
 
-scripts/            # setup pipeline
-
-streamlit_app.py
-```
+- [`architecture.md`](docs/architecture.md)
+- [`cli.md`](docs/cli.md)
+- [`demo_gallery.md`](docs/demo_gallery.md)
+- [`developer_guide.md`](docs/developer_guide.md)
+- [`planner_schema.md`](docs/planner_schema.md)
+- [`verification.md`](docs/verification.md)
 
 ---
 

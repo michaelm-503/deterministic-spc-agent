@@ -6,7 +6,7 @@ Minimal smoke test for Deterministic SPC Agent (Phase 2).
 What it checks:
 - demo_gallery.json loads
 - plan library validates (light validation)
-- one run executes end-to-end
+- one run executes end-to-end test of the backend (JSON in, plots out)
 - expected artifacts exist per job:
     extracted_data.csv
     processed_data.csv
