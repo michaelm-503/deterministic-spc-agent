@@ -387,6 +387,40 @@ def _render_result(result: Any) -> None:
 
 
 # -----------------------------
+# Guided demo helpers
+# -----------------------------
+def _start_guided_demo(demo_prompts: list[str]) -> None:
+    step = st.session_state.get("guided_demo_step", 0)
+
+    if step == 0:
+        if demo_prompts:
+            st.session_state["prompt_input"] = demo_prompts[0]
+            st.session_state["force_json_upload"] = False
+            st.session_state["run_requested_from_guided_demo"] = True
+
+    elif step == 1:
+        history = st.session_state.get("history", [])
+        if not history:
+            return
+        st.session_state["prompt_input"] = (
+            "Zoom in on 1/5-1/7 on temperature. "
+            "Add a boxplot for the last 3 days and an OOC summary."
+        )
+        st.session_state["force_json_upload"] = True
+        st.session_state["context_history_index"] = 0
+        st.session_state["run_requested_from_guided_demo"] = True
+
+
+def _guided_demo_label() -> str:
+    step = st.session_state.get("guided_demo_step", 0)
+    if step == 0:
+        return "▶ Run Guided Demo"
+    if step == 1:
+        return "▶ Continue Guided Demo"
+    return ""
+
+
+# -----------------------------
 # Session state init
 # -----------------------------
 if "history" not in st.session_state:
@@ -401,7 +435,10 @@ if "force_json_upload" not in st.session_state:
     st.session_state.force_json_upload = False
 if "reset_force_json_upload" not in st.session_state:
     st.session_state.reset_force_json_upload = False
-
+if "guided_demo_step" not in st.session_state:
+    st.session_state.guided_demo_step = 0
+if "run_requested_from_guided_demo" not in st.session_state:
+    st.session_state.run_requested_from_guided_demo = False
     
 # -----------------------------
 # Header
@@ -458,7 +495,6 @@ with tab_agent:
     demo_prompts = _load_demo_prompts(Path(project_root).resolve(), planner_file)
     selected_item = _compute_active_context()
 
-    st.caption("New here? Try 'Random Demo Prompt' for a pre-built prompt or check the 'About This Dataset' tab to explore the data and write your own!")
     col_prompt, col_demo = st.columns([3, 1])
     with col_prompt:
         st.text_area(
@@ -470,12 +506,21 @@ with tab_agent:
     with col_demo:
         st.write("")
         st.write("")
-        st.button(
-            "Random Demo Prompt",
-            use_container_width=True,
-            on_click=_set_random_demo_prompt,
-            args=(demo_prompts,),
-        )
+        if st.session_state.get("guided_demo_step", 0) < 2:
+            st.button(
+                _guided_demo_label(),
+                use_container_width=True,
+                on_click=_start_guided_demo,
+                args=(demo_prompts,),
+                type="primary",
+            )
+        else:
+            st.button(
+                "Random Demo Prompt",
+                use_container_width=True,
+                on_click=_set_random_demo_prompt,
+                args=(demo_prompts,),
+            )
         if st.session_state.history:
             builder_choice = st.selectbox(
                 "Replot builder",
@@ -525,6 +570,10 @@ with tab_agent:
     # -----------------------------
     # Run agent
     # -----------------------------
+    if st.session_state.get("run_requested_from_guided_demo", False):
+        run_clicked = True
+        st.session_state["run_requested_from_guided_demo"] = False
+    
     if run_clicked:
         prompt_text = st.session_state.prompt_input.strip()
         if not prompt_text:
@@ -573,6 +622,10 @@ with tab_agent:
                 st.session_state.history.insert(0, item)
                 st.session_state.selected_history_index = 0
                 st.session_state.context_history_index = None
+
+                if st.session_state.get("guided_demo_step", 0) < 2:
+                    st.session_state["guided_demo_step"] += 1
+    
                 st.session_state.reset_force_json_upload = True
                 st.rerun()
                 
@@ -592,7 +645,14 @@ with tab_agent:
                 st.code(current["submitted_prompt"])
         _render_result(current["result"])
     else:
-        st.info("Run the agent or select a previous run from the sidebar to view artifacts.")
+        if st.session_state.get("guided_demo_step", 0) < 2:
+            st.markdown("### Welcome to the Deterministic SPC Agent")
+            st.write("Ask manufacturing questions and get deterministic SPC analysis.")
+            st.write("Start with **Run Guided Demo** for a two-step walkthrough, or enter your own prompt above.")
+        else:
+            st.markdown("### Welcome to the Deterministic SPC Agent")
+            st.write("Ask manufacturing questions and get deterministic SPC analysis.")
+            st.write("Use **Random Demo Prompt** for inspiration, or enter your own prompt above.")
 
 # -----------------------------
 # Dataset Tab
