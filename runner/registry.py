@@ -1,12 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-
-from preprocess.spc_mode_rolling import preprocess_ewma_spc
-from plots.spc_time_series import plot_spc_time_series
-from plots.fleet_time_trend import plot_fleet_time_trend
-from plots.fleet_boxplot import plot_fleet_boxplot
-from tables.fleet_ooc_summary import write_fleet_ooc_summary_csv
-
+from typing import Callable
 
 # -----------------------------------------------------------------------------
 # Project Root
@@ -19,10 +13,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # SQL Registry (with explicit parameter signatures)
 # -----------------------------------------------------------------------------
 
+from runner.sql_render import render_pm_event_sensor_history_sql
+
 @dataclass(frozen=True)
 class SQLSpec:
     path: Path
-    params: tuple[str, ...]  # ordered param names matching '?' placeholders
+    params: tuple[str, ...]
+    renderer: Callable | None = None # optional Python renderer for dynamic SQL
 
 
 SQL_REGISTRY: dict[str, SQLSpec] = {
@@ -39,6 +36,11 @@ SQL_REGISTRY: dict[str, SQLSpec] = {
         path=PROJECT_ROOT / "sql" / "fleet_sensor_history.sql",
         params=("entity_group", "sensor", "start_ts", "end_ts"),
     ),
+    "pm_event_sensor_history": SQLSpec(
+        path=PROJECT_ROOT / "sql" / "pm_event_sensor_history.sql",
+        params=("entity_group", "entity", "start_ts", "end_ts"),
+        renderer=render_pm_event_sensor_history_sql,
+    ),
 }
 
 
@@ -46,14 +48,22 @@ SQL_REGISTRY: dict[str, SQLSpec] = {
 # Preprocess Registry
 # -----------------------------------------------------------------------------
 
+from preprocess.spc_mode_rolling import preprocess_ewma_spc
+from preprocess.pm_event_ooc_summary import preprocess_pm_event_ooc_summary
+
 PREPROCESS_REGISTRY = {
     "ewma_spc": preprocess_ewma_spc,
+    "pm_event_ooc_summary": preprocess_pm_event_ooc_summary,
 }
 
 
 # -----------------------------------------------------------------------------
 # Plot Registry
 # -----------------------------------------------------------------------------
+
+from plots.spc_time_series import plot_spc_time_series
+from plots.fleet_time_trend import plot_fleet_time_trend
+from plots.fleet_boxplot import plot_fleet_boxplot
 
 PLOT_REGISTRY = {
     "spc_time_series": plot_spc_time_series,
@@ -66,6 +76,10 @@ PLOT_REGISTRY = {
 # Table Registry
 # -----------------------------------------------------------------------------
 
+from tables.fleet_ooc_summary import write_fleet_ooc_summary_csv
+from tables.pm_event_summary_table import write_pm_event_summary_table
+
 TABLE_REGISTRY = {
     "fleet_ooc_summary": write_fleet_ooc_summary_csv,
+    "pm_event_summary_table": write_pm_event_summary_table,
 }

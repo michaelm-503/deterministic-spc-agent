@@ -13,13 +13,31 @@ Supported plans
 2. Replot plan - references a previous run and/or job to specify new output objects generated from existing artifacts
 
 -----
-Execution plans
+Supported Queries
 -----
 
-Examples of execution prompts:
+1. Maintenance (PM) History
+Examples of PM history execution prompts:
+    - Show PM history for <entity(s)> for the last <time range>
+    - What is the repair history on <entity(s)>
+    - What maintenance work happened on <entity(s)>
+
+Use pm_event_sensor_history + pm_event_ooc_summary + pm_event_summary_table when the user asks for:
+- PM history
+- maintenance history
+- pre-PM failure signatures
+- sensors that were out of control before maintenance
+
+2. Sensor Data
+Examples of sensor data execution prompts:
     - Show <sensor> data on <entity_group>
     - Check <entity> for <sensor> data over <time range>
     - A <sensor> event happened on <entity> on <date>. How is it doing now?
+Use entity/fleet_sensor_history + ewma_spc workflow. These can be combined with several plot and table options.
+
+-----
+Execution plans
+-----
 
 For ask_agent(), prefer a single execution run object, not a plan library, unless multiple runs are explicitly required.
 
@@ -28,7 +46,7 @@ Single run shape:
 - request_text: string. Stores user prompt
 - jobs: non-empty list
 
-Minimal valid run execution plan:
+Minimal valid run execution plan for sensor data requests:
 {
   "runs": [
     {
@@ -60,6 +78,28 @@ Minimal valid run execution plan:
   ]
 }
 
+Valid job example for PM history requests:
+{
+  "job_id": "arm20_pm_history",
+  "sql_template": "pm_event_sensor_history",
+  "preprocess": "pm_event_ooc_summary",
+  "filters": {
+    "entity_group": "ARM",
+    "entity": "ARM20",
+    "sensor": null,
+    "start_ts": null,
+    "end_ts": null
+  },
+  "outputs": {
+    "tables": [
+      {
+        "table": "pm_event_summary_table",
+        "table_name": "arm20_pm_history.csv"
+      }
+    ]
+  }
+}
+
 -----
 Job object
 -----
@@ -78,9 +118,9 @@ Each supported execution job must include at least one visible output:
 - or tables
 
 Filters:
-- entity_group : string. Required for all jobs
-- entity : string or null. Specify for single-entity jobs. Leave null for multiple entities or fleet jobs.
-- sensor : string. Required for sensor-based views
+- entity_group : string. One and only one entity group required per job. Can be inferred from entity[:3].
+- entity : string, list, or null. Specify for single-entity or selected-entity jobs. Leave null for fleet jobs.
+- sensor : string or null. Sensor plotting jobs must specify one and only one sensor - utilize multiple jobs for multiple sensors. PM history workflows can specify null for multiple sensors.
 - start_ts : ISO datetime or null. Optional SQL-level lower bound
 - end_ts : ISO datetime or null. Optional SQL-level upper bound
 
@@ -96,7 +136,7 @@ Planning rules:
 - prefer minimal overrides
 - use defaults whenever possible
 - generate one job per analytic question unless multiple jobs are clearly required
-- only one sensor per job
+- only one sensor per job unless the sql_template explicitly supports multi-sensor event workflows
 - only one entity_group per job
 - if multiple outputs share the same dataset and time scope (including overlapping subsets), keep them in one job and utilize output-level params
 - if outputs require materially different time windows, prefer separate jobs

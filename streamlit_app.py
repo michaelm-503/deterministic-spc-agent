@@ -239,6 +239,13 @@ def _collect_output_artifacts(result: Any) -> tuple[list[Path], list[Path]]:
 
     root = Path(result.run_dir)
     image_exts = {".png", ".jpg", ".jpeg", ".webp"}
+    
+    # CSV files that are pipeline artifacts, not user-facing table outputs
+    excluded_csv_names = {
+        "extracted_data.csv",
+        "processed_data.csv",
+    }
+
     image_paths: list[Path] = []
     table_paths: list[Path] = []
 
@@ -246,12 +253,17 @@ def _collect_output_artifacts(result: Any) -> tuple[list[Path], list[Path]]:
         for path in root.rglob("*"):
             if not path.is_file():
                 continue
-            if path.suffix.lower() in image_exts:
+
+            suffix = path.suffix.lower()
+            name = path.name.lower()
+
+            if suffix in image_exts:
                 image_paths.append(path)
-            elif path.suffix.lower() == ".csv":
-                name = path.name.lower()
-                if "summary" in name or "ooc" in name:
-                    table_paths.append(path)
+
+            elif suffix == ".csv":
+                if name in excluded_csv_names:
+                    continue
+                table_paths.append(path)
 
     return sorted(image_paths), sorted(table_paths)
 
