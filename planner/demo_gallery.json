@@ -1,10 +1,231 @@
 {
   "_comment": "Demonstration plan library used in README and docs/demo_gallery.md",
   "runs": [
+
     {
-      "run_id": "demo_cpr11_health_check",
-      "request_text": "CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?",
+      "run_id": "cpr_pm_history",
+      "request_text": "Show the maintenance history on CPR.",
       "jobs": [
+        {
+          "job_id": "cpr_pm_history",
+          "sql_template": "pm_event_sensor_history",
+          "preprocess": "pm_event_ooc_summary",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": null,
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "pm_event_summary_table",
+                "table_name": "cpr_pm_history.csv"
+              }
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "run_id": "cpr15_vibration_pre_maintenance",
+      "request_text": "Plot vibration on CPR15 leading up to the work on 1/9.",
+      "jobs": [
+        {
+          "job_id": "cpr15_vibration_pre_maintenance",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": "2024-01-09T00:00:00"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_vibration_pre_maintenance.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "run_id": "cpr15_all_sensors_2024_01_08_2024_01_12",
+      "request_text": "Plot all sensors on CPR15 for 1/8-1/12.",
+      "jobs": [
+        {
+          "job_id": "cpr15_ambient_temp",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "ambient_temp",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_ambient_temp_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr15_current_phase_avg",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "current_phase_avg",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_current_phase_avg_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr15_pressure_level",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "pressure_level",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_pressure_level_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr15_rpm",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "rpm",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_rpm_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr15_temperature_motor",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "temperature_motor",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_temperature_motor_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr15_vibration_rms",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR15",
+            "sensor": "vibration_rms",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-12T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr15_vibration_rms_2024_01_08_2024_01_12.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "cpr11_pm_and_health_check",
+      "request_text": "CPR11 needed maintenance last week. How is the tool doing now?",
+      "jobs": [
+        {
+          "job_id": "cpr11_pm_history_last_week",
+          "sql_template": "pm_event_sensor_history",
+          "preprocess": "pm_event_ooc_summary",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR11",
+            "sensor": null,
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-14T23:59:59"
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "pm_event_summary_table",
+                "table_name": "cpr11_pm_history_last_week.csv"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cpr11_health_summary_now",
+          "sql_template": "entity_all_sensor_history",
+          "preprocess": "multi_sensor_health_summary",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR11",
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "multi_sensor_health_table",
+                "table_name": "cpr11_health_summary_now.csv"
+              }
+            ]
+          }
+        },
         {
           "job_id": "CPR11_temperature_motor",
           "sql_template": "entity_sensor_history",
@@ -48,6 +269,110 @@
       ]
     },
     {
+      "run_id": "demo_cpr14_pressure_pm_window_jan09_ewma_only",
+      "request_text": "CPR14 had pressure instability around Jan 9. Show pressure +/-2 days.",
+      "jobs": [
+        {
+          "job_id": "cpr14_pressure_jan09_pm_window",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR14",
+            "sensor": "pressure_level",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr14_pressure_pm_window_jan09.png",
+                "params": {
+                  "start_ts": "2024-01-07",
+                  "end_ts": "2024-01-11",
+                  "show_raw": true,
+                  "show_ewma": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "cnc_fleet_health_summary",
+      "request_text": "How is the CNC fleet running?",
+      "jobs": [
+        {
+          "job_id": "cnc_fleet_health_summary",
+          "sql_template": "entity_all_sensor_history",
+          "preprocess": "multi_sensor_health_summary",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": null,
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "multi_sensor_health_table",
+                "table_name": "cnc_fleet_health_summary.csv"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "cnc04_motor_temp_and_vibration_flags",
+      "request_text": "Plot the flags for CNC04 motor temp and vibration.",
+      "jobs": [
+        {
+          "job_id": "cnc04_temperature_motor_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC04",
+            "sensor": "temperature_motor",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc04_temperature_motor_flags.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "cnc04_vibration_rms_flags",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CNC",
+            "entity": "CNC04",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cnc04_vibration_rms_flags.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "run_id": "demo_cnc_rpm_comparison",
       "request_text": "Compare RPM trends for CNC03 and CNC04.",
       "jobs": [
@@ -81,11 +406,31 @@
       ]
     },
     {
-      "run_id": "demo_arm_vibration",
+      "run_id": "arm_health_and_vibration_plot",
       "request_text": "The ARM technician will be out next week. Are any vibration PMs coming up?",
       "jobs": [
         {
-          "job_id": "arm_fleet_vibration_health_check",
+          "job_id": "arm_health_summary",
+          "sql_template": "entity_all_sensor_history",
+          "preprocess": "multi_sensor_health_summary",
+          "filters": {
+            "entity_group": "ARM",
+            "entity": null,
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "multi_sensor_health_table",
+                "table_name": "arm_health_summary.csv"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "arm_vibration_rms_plot",
           "sql_template": "fleet_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
@@ -95,28 +440,37 @@
             "start_ts": null,
             "end_ts": null
           },
-          "params": {},
           "outputs": {
             "plots": [
               {
                 "plot": "fleet_time_trend",
-                "plot_name": "arm_fleet_vibration_time_trend.png"
-              },
-              {
-                "plot": "fleet_boxplot",
-                "plot_name": "arm_fleet_vibration_boxplot.png",
-                "params": {
-                  "window_days": 3
-                }
+                "plot_name": "arm_vibration_rms.png"
               }
-            ],
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "pmp_pm_history",
+      "request_text": "What is the PM history for PMP?",
+      "jobs": [
+        {
+          "job_id": "pmp_pm_history",
+          "sql_template": "pm_event_sensor_history",
+          "preprocess": "pm_event_ooc_summary",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": null,
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
             "tables": [
               {
-                "table": "fleet_ooc_summary",
-                "table_name": "arm_fleet_vibration_OOCs_last_1_day.csv",
-                "params": {
-                  "window_days": 1
-                }
+                "table": "pm_event_summary_table",
+                "table_name": "pmp_pm_history.csv"
               }
             ]
           }
@@ -125,7 +479,7 @@
     },
     {
       "run_id": "demo_pmp06_vibration_pm_window_jan03",
-      "request_text": "PMP06 had a vibration event around Jan 3. Show vibration trend \u00b13 days around that date.",
+      "request_text": "PMP06 had a vibration event around Jan 3. Show vibration trend +/- 3 days around that date.",
       "jobs": [
         {
           "job_id": "pmp06_vibration_jan03_pm_window",
@@ -156,31 +510,45 @@
       ]
     },
     {
-      "run_id": "demo_pmp07_vibration_pm_window_jan07_hide_legend",
-      "request_text": "PMP07 vibration around Jan 7. Plot \u00b13 days and hide the legend.",
+      "run_id": "pmp07_vibration_failure_and_health_check",
+      "request_text": "PMP07 failed for vibration around Jan 7. Plot +/- 3 days. How is it running now?",
       "jobs": [
         {
-          "job_id": "pmp07_vibration_jan07_pm_window",
+          "job_id": "pmp07_vibration_20240104_20240110",
           "sql_template": "entity_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
             "entity_group": "PMP",
             "entity": "PMP07",
             "sensor": "vibration_rms",
-            "start_ts": null,
-            "end_ts": null
+            "start_ts": "2024-01-04T00:00:00",
+            "end_ts": "2024-01-10T23:59:59"
           },
           "outputs": {
             "plots": [
               {
                 "plot": "spc_time_series",
-                "plot_name": "pmp07_vibration_pm_window_jan07.png",
-                "params": {
-                  "start_ts": "2024-01-04",
-                  "end_ts": "2024-01-10",
-                  "show_raw": true,
-                  "legend": false
-                }
+                "plot_name": "pmp07_vibration_20240104_20240110.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "pmp07_health_summary",
+          "sql_template": "entity_all_sensor_history",
+          "preprocess": "multi_sensor_health_summary",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": "PMP07",
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "tables": [
+              {
+                "table": "multi_sensor_health_table",
+                "table_name": "pmp07_health_summary.csv"
               }
             ]
           }
@@ -188,55 +556,71 @@
       ]
     },
     {
-      "run_id": "demo_pmp07_current_rpm_pm_window_jan02",
-      "request_text": "PMP07 had current/rpm issues around Jan 2. Show both current and rpm \u00b12 days.",
+      "run_id": "pmp07_pressure_level_time_trend",
+      "request_text": "PMP07 is flagging for pressure drift. Make a time trend",
       "jobs": [
         {
-          "job_id": "pmp07_current_jan02",
+          "job_id": "pmp07_pressure_level",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": "PMP07",
+            "sensor": "pressure_level",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "pmp07_pressure_level.png"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "run_id": "pmp07_current_rpm_20231231_20240104",
+      "request_text": "PMP07 had current/rpm issues around Jan 2. Show both current and rpm +/- 2 days",
+      "jobs": [
+        {
+          "job_id": "pmp07_current_phase_avg_20231231_20240104",
           "sql_template": "entity_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
             "entity_group": "PMP",
             "entity": "PMP07",
             "sensor": "current_phase_avg",
-            "start_ts": null,
-            "end_ts": null
+            "start_ts": "2023-12-31T00:00:00",
+            "end_ts": "2024-01-04T23:59:59"
           },
           "outputs": {
             "plots": [
               {
                 "plot": "spc_time_series",
-                "plot_name": "pmp07_current_jan02.png",
-                "params": {
-                  "start_ts": "2023-12-31",
-                  "end_ts": "2024-01-04",
-                  "show_raw": true
-                }
+                "plot_name": "pmp07_current_phase_avg_20231231_20240104.png"
               }
             ]
           }
         },
         {
-          "job_id": "pmp07_rpm_jan02",
+          "job_id": "pmp07_rpm_20231231_20240104",
           "sql_template": "entity_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
             "entity_group": "PMP",
             "entity": "PMP07",
             "sensor": "rpm",
-            "start_ts": null,
-            "end_ts": null
+            "start_ts": "2023-12-31T00:00:00",
+            "end_ts": "2024-01-04T23:59:59"
           },
           "outputs": {
             "plots": [
               {
                 "plot": "spc_time_series",
-                "plot_name": "pmp07_rpm_jan02.png",
-                "params": {
-                  "start_ts": "2023-12-31",
-                  "end_ts": "2024-01-04",
-                  "show_raw": true
-                }
+                "plot_name": "pmp07_rpm_20231231_20240104.png"
               }
             ]
           }
@@ -244,41 +628,85 @@
       ]
     },
     {
-      "run_id": "demo_pmp09_temp_snapshot_plus_ooc_last3d",
-      "request_text": "PMP09 had temp/current/rpm issues on Jan 12. Show temp trend last 3 days and an OOC summary table last 3 days (temp).",
+      "run_id": "pmp09_temp_current_rpm_20240109_20240115_health_check",
+      "request_text": "PMP09 had temp/current/rpm issues on Jan 12. How is the tool doing now?",
       "jobs": [
         {
-          "job_id": "pmp09_temp_last3d_plot_and_table",
+          "job_id": "pmp09_temperature_motor_20240109_20240115",
           "sql_template": "entity_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
             "entity_group": "PMP",
             "entity": "PMP09",
             "sensor": "temperature_motor",
-            "start_ts": null,
-            "end_ts": null
+            "start_ts": "2024-01-09T00:00:00",
+            "end_ts": "2024-01-15T23:59:59"
           },
           "outputs": {
             "plots": [
               {
                 "plot": "spc_time_series",
-                "plot_name": "pmp09_temp_last3d.png",
-                "params": {
-                  "window_days": 3,
-                  "show_raw": true
-                }
+                "plot_name": "pmp09_temperature_motor_20240109_20240115.png"
               }
-            ],
+            ]
+          }
+        },
+        {
+          "job_id": "pmp09_current_phase_avg_20240109_20240115",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": "PMP09",
+            "sensor": "current_phase_avg",
+            "start_ts": "2024-01-09T00:00:00",
+            "end_ts": "2024-01-15T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "pmp09_current_phase_avg_20240109_20240115.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "pmp09_rpm_20240109_20240115",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": "PMP09",
+            "sensor": "rpm",
+            "start_ts": "2024-01-09T00:00:00",
+            "end_ts": "2024-01-15T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "pmp09_rpm_20240109_20240115.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "pmp09_health_summary",
+          "sql_template": "entity_all_sensor_history",
+          "preprocess": "multi_sensor_health_summary",
+          "filters": {
+            "entity_group": "PMP",
+            "entity": "PMP09",
+            "sensor": null,
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
             "tables": [
               {
-                "table": "fleet_ooc_summary",
-                "table_name": "pmp09_temp_ooc_last3d.csv",
-                "params": {
-                  "window_days": 3,
-                  "entities": [
-                    "PMP09"
-                  ]
-                }
+                "table": "multi_sensor_health_table",
+                "table_name": "pmp09_health_summary.csv"
               }
             ]
           }
@@ -286,69 +714,49 @@
       ]
     },
     {
-      "run_id": "demo_arm_vibration_fleet_then_arm17_pm_window",
-      "request_text": "ARM17 vibration around Jan 3. Compare ARM fleet vibration last 7 days, then ARM17 \u00b13 days around Jan 3.",
+      "run_id": "arm17_vibration_issue_and_fleet_trends_20240108_20240114",
+      "request_text": "ARM17 had vibration issues around Jan 3. Show fleet trends and box plots for vibration over the last 7 days.",
       "jobs": [
         {
-          "job_id": "arm_fleet_vibration_last7d",
-          "sql_template": "fleet_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "ARM",
-            "entity": null,
-            "sensor": "vibration_rms",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "fleet_time_trend",
-                "plot_name": "arm_fleet_vibration_last7d.png",
-                "params": {
-                  "window_days": 7
-                }
-              },
-              {
-                "plot": "fleet_boxplot",
-                "plot_name": "arm_fleet_vibration_boxplot_last3d.png",
-                "params": {
-                  "window_days": 3
-                }
-              }
-            ],
-            "tables": [
-              {
-                "table": "fleet_ooc_summary",
-                "table_name": "arm_fleet_vibration_ooc_last3d.csv",
-                "params": {
-                  "window_days": 3
-                }
-              }
-            ]
-          }
-        },
-        {
-          "job_id": "arm17_vibration_pm_window_jan03",
+          "job_id": "arm17_vibration_20240101_20240107",
           "sql_template": "entity_sensor_history",
           "preprocess": "ewma_spc",
           "filters": {
             "entity_group": "ARM",
             "entity": "ARM17",
             "sensor": "vibration_rms",
-            "start_ts": null,
-            "end_ts": null
+            "start_ts": "2024-01-01T00:00:00",
+            "end_ts": "2024-01-07T23:59:59"
           },
           "outputs": {
             "plots": [
               {
                 "plot": "spc_time_series",
-                "plot_name": "arm17_vibration_pm_window_jan03.png",
-                "params": {
-                  "start_ts": "2024-01-01",
-                  "end_ts": "2024-01-06",
-                  "show_raw": true
-                }
+                "plot_name": "arm17_vibration_20240101_20240107.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "arm_fleet_vibration_20240108_20240114",
+          "sql_template": "fleet_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "ARM",
+            "entity": null,
+            "sensor": "vibration_rms",
+            "start_ts": "2024-01-08T00:00:00",
+            "end_ts": "2024-01-14T23:59:59"
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "fleet_time_trend",
+                "plot_name": "arm_fleet_vibration_trend_20240108_20240114.png"
+              },
+              {
+                "plot": "fleet_boxplot",
+                "plot_name": "arm_fleet_vibration_boxplot_20240108_20240114.png"
               }
             ]
           }
@@ -435,7 +843,7 @@
     },
     {
       "run_id": "demo_arm19_post_pm_instability_jan10_13",
-      "request_text": "ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10\u2013Jan 13.",
+      "request_text": "ARM19 issues on Jan 11 then pressure instability on Jan 12. Show pressure and temp from Jan 10-Jan 13.",
       "jobs": [
         {
           "job_id": "arm19_pressure_jan10_13",
@@ -481,161 +889,6 @@
                 "params": {
                   "start_ts": "2024-01-10",
                   "end_ts": "2024-01-13",
-                  "show_raw": true
-                }
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "run_id": "demo_cpr14_pressure_pm_window_jan09_ewma_only",
-      "request_text": "CPR14 had pressure instability around Jan 9. Show pressure \u00b12 days.",
-      "jobs": [
-        {
-          "job_id": "cpr14_pressure_jan09_pm_window",
-          "sql_template": "entity_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": "CPR14",
-            "sensor": "pressure_level",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "spc_time_series",
-                "plot_name": "cpr14_pressure_pm_window_jan09.png",
-                "params": {
-                  "start_ts": "2024-01-07",
-                  "end_ts": "2024-01-11",
-                  "show_raw": true,
-                  "show_ewma": true
-                }
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "run_id": "demo_cpr15_vibration_and_pressure_last7d",
-      "request_text": "CPR15 had vibration on Jan 9 and pressure instability on Jan 11. Show last 7 days for vibration and pressure.",
-      "jobs": [
-        {
-          "job_id": "cpr15_vibration_last7d",
-          "sql_template": "entity_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": "CPR15",
-            "sensor": "vibration_rms",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "spc_time_series",
-                "plot_name": "cpr15_vibration_last7d.png",
-                "params": {
-                  "window_days": 7,
-                  "show_raw": true
-                }
-              }
-            ]
-          }
-        },
-        {
-          "job_id": "cpr15_pressure_last7d",
-          "sql_template": "entity_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": "CPR15",
-            "sensor": "pressure_level",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "spc_time_series",
-                "plot_name": "cpr15_pressure_last7d.png",
-                "params": {
-                  "window_days": 7,
-                  "show_raw": true
-                }
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "run_id": "demo_cpr_pressure_fleet_last3d_plus_cpr15",
-      "request_text": "After CPR15 post-PM pressure instability, show CPR fleet pressure last 3 days and CPR15 separately.",
-      "jobs": [
-        {
-          "job_id": "cpr_fleet_pressure_last3d",
-          "sql_template": "fleet_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": null,
-            "sensor": "pressure_level",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "fleet_time_trend",
-                "plot_name": "cpr_fleet_pressure_last3d.png",
-                "params": {
-                  "window_days": 3
-                }
-              },
-              {
-                "plot": "fleet_boxplot",
-                "plot_name": "cpr_fleet_pressure_boxplot_last3d.png",
-                "params": {
-                  "window_days": 3
-                }
-              }
-            ],
-            "tables": [
-              {
-                "table": "fleet_ooc_summary",
-                "table_name": "cpr_fleet_pressure_ooc_last3d.csv",
-                "params": {
-                  "window_days": 3
-                }
-              }
-            ]
-          }
-        },
-        {
-          "job_id": "cpr15_pressure_focus_last3d",
-          "sql_template": "entity_sensor_history",
-          "preprocess": "ewma_spc",
-          "filters": {
-            "entity_group": "CPR",
-            "entity": "CPR15",
-            "sensor": "pressure_level",
-            "start_ts": null,
-            "end_ts": null
-          },
-          "outputs": {
-            "plots": [
-              {
-                "plot": "spc_time_series",
-                "plot_name": "cpr15_pressure_focus_last3d.png",
-                "params": {
-                  "window_days": 3,
                   "show_raw": true
                 }
               }

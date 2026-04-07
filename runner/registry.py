@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 # SQL Registry (with explicit parameter signatures)
 # -----------------------------------------------------------------------------
 
-from runner.sql_render import render_pm_event_sensor_history_sql
+from runner.sql_render import render_sql_entity_helper
 
 @dataclass(frozen=True)
 class SQLSpec:
@@ -39,7 +39,12 @@ SQL_REGISTRY: dict[str, SQLSpec] = {
     "pm_event_sensor_history": SQLSpec(
         path=PROJECT_ROOT / "sql" / "pm_event_sensor_history.sql",
         params=("entity_group", "entity", "start_ts", "end_ts"),
-        renderer=render_pm_event_sensor_history_sql,
+        renderer=render_sql_entity_helper,
+    ),
+    "entity_all_sensor_history": SQLSpec(
+        path=PROJECT_ROOT / "sql" / "entity_all_sensor_history.sql",
+        params=("entity_group", "entity", "start_ts", "end_ts"),
+        renderer=render_sql_entity_helper,
     ),
 }
 
@@ -50,10 +55,12 @@ SQL_REGISTRY: dict[str, SQLSpec] = {
 
 from preprocess.spc_mode_rolling import preprocess_ewma_spc
 from preprocess.pm_event_ooc_summary import preprocess_pm_event_ooc_summary
+from preprocess.multi_sensor_health_summary import preprocess_multi_sensor_health_summary
 
 PREPROCESS_REGISTRY = {
     "ewma_spc": preprocess_ewma_spc,
     "pm_event_ooc_summary": preprocess_pm_event_ooc_summary,
+    "multi_sensor_health_summary": preprocess_multi_sensor_health_summary,
 }
 
 
@@ -78,8 +85,10 @@ PLOT_REGISTRY = {
 
 from tables.fleet_ooc_summary import write_fleet_ooc_summary_csv
 from tables.pm_event_summary_table import write_pm_event_summary_table
+from tables.multi_sensor_health_table import write_multi_sensor_health_table
 
 TABLE_REGISTRY = {
     "fleet_ooc_summary": write_fleet_ooc_summary_csv,
     "pm_event_summary_table": write_pm_event_summary_table,
+    "multi_sensor_health_table": write_multi_sensor_health_table,
 }
