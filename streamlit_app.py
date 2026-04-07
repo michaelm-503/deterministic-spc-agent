@@ -364,7 +364,7 @@ def _render_outputs(result: Any) -> None:
         st.write(f"**{table_path.name}**")
         try:
             df = pd.read_csv(table_path)
-            st.dataframe(df, width="stretch")
+            st.dataframe(_style_output_table(df), width="stretch")
         except Exception as e:
             st.warning(f"Could not load table {table_path.name}: {e}")
 
@@ -401,35 +401,90 @@ def _render_result(result: Any) -> None:
 # -----------------------------
 # Guided demo helpers
 # -----------------------------
+# -----------------------------
+# Guided demo helpers
+# -----------------------------
 def _start_guided_demo(demo_prompts: list[str]) -> None:
     step = st.session_state.get("guided_demo_step", 0)
 
-    if step == 0:
-        if demo_prompts:
-            st.session_state["prompt_input"] = demo_prompts[0]
+    # Steps 0-2: canonical gallery prompts
+    if step in (0, 1, 2):
+        if len(demo_prompts) > step:
+            st.session_state["prompt_input"] = demo_prompts[step]
             st.session_state["force_json_upload"] = False
+            st.session_state["context_history_index"] = None
             st.session_state["run_requested_from_guided_demo"] = True
+        return
 
-    elif step == 1:
-        history = st.session_state.get("history", [])
-        if not history:
-            return
-        st.session_state["prompt_input"] = (
-            "Zoom in on 1/5-1/7 on temperature. "
-            "Add a boxplot for the last 3 days and an OOC summary."
-        )
-        st.session_state["force_json_upload"] = True
-        st.session_state["context_history_index"] = 0
+    # Steps 3-5: contextual follow-ups
+    history = st.session_state.get("history", [])
+    if not history:
+        return
+
+    st.session_state["force_json_upload"] = True
+    st.session_state["context_history_index"] = 0
+
+    if step == 3:
+        st.session_state["prompt_input"] = "How is the tool doing now?"
         st.session_state["run_requested_from_guided_demo"] = True
+        return
+
+    if step == 4:
+        st.session_state["prompt_input"] = "Plot ambient temp"
+        st.session_state["run_requested_from_guided_demo"] = True
+        return
+
+    if step == 5:
+        st.session_state["prompt_input"] = "Zoom in on just the last 2 days."
+        st.session_state["run_requested_from_guided_demo"] = True
+        return
 
 
 def _guided_demo_label() -> str:
     step = st.session_state.get("guided_demo_step", 0)
-    if step == 0:
-        return "▶ Run Guided Demo"
-    if step == 1:
-        return "▶ Continue Guided Demo"
-    return ""
+
+    labels = {
+        0: "▶ Run Guided Demo",
+        1: "▶ Continue Guided Demo",
+        2: "▶ Continue Guided Demo",
+        3: "▶ Continue Guided Demo",
+        4: "▶ Continue Guided Demo",
+        5: "▶ Continue Guided Demo",
+    }
+    return labels.get(step, "")
+
+
+# -----------------------------
+# Conditional Formatting
+# -----------------------------
+def _style_output_table(df: pd.DataFrame):
+    """
+    Apply lightweight conditional formatting for supported summary tables.
+
+    Current rules
+    -------------
+    - health_status != stable -> orange row accent
+    - baseline_trend != stable_baseline -> orange row accent
+    """
+    if not isinstance(df, pd.DataFrame) or df.empty:
+        return df
+
+    if "health_status" not in df.columns and "baseline_trend" not in df.columns:
+        return df
+
+    def _row_style(row: pd.Series) -> list[str]:
+        highlight = False
+
+        if "health_status" in row.index and str(row["health_status"]) != "stable":
+            highlight = True
+        if "baseline_trend" in row.index and str(row["baseline_trend"]) != "stable_baseline":
+            highlight = True
+
+        if highlight:
+            return ["background-color: #fff3cd"] * len(row)
+        return [""] * len(row)
+
+    return df.style.apply(_row_style, axis=1)
 
 
 # -----------------------------
@@ -518,7 +573,7 @@ with tab_agent:
     with col_demo:
         st.write("")
         st.write("")
-        if st.session_state.get("guided_demo_step", 0) < 2:
+        if st.session_state.get("guided_demo_step", 0) < 6:
             st.button(
                 _guided_demo_label(),
                 use_container_width=True,
@@ -635,7 +690,7 @@ with tab_agent:
                 st.session_state.selected_history_index = 0
                 st.session_state.context_history_index = None
 
-                if st.session_state.get("guided_demo_step", 0) < 2:
+                if st.session_state.get("guided_demo_step", 0) < 6:
                     st.session_state["guided_demo_step"] += 1
     
                 st.session_state.reset_force_json_upload = True

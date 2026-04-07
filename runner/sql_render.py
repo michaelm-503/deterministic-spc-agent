@@ -73,7 +73,7 @@ def render_sql_template(sql_path: str | Path, substitutions: dict[str, str]) -> 
     return sql
 
 
-def render_pm_event_sensor_history_sql(
+def render_sql_entity_helper(
     sql_path: str | Path,
     *,
     entity_group: str,
@@ -82,7 +82,7 @@ def render_pm_event_sensor_history_sql(
     end_ts: Any = None,
 ) -> tuple[str, list[Any]]:
     """
-    Render the PM-event SQL template and return (sql, params).
+    Render SQL for flexible entity filter data types and return (sql, params). Use when filters do NOT include sensor.
 
     Parameter order matches the rendered SQL:
     1. entity_group

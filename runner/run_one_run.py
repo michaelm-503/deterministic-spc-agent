@@ -301,23 +301,41 @@ def _parse_ts(ts):
     # assume string
     return pd.to_datetime(ts).to_pydatetime()
 
-def _apply_optional_time_slice(df, plot_params):
+def _apply_optional_time_slice(df: pd.DataFrame, params: dict | None) -> pd.DataFrame:
+    """
+    Apply optional time slicing when a dataframe includes a canonical `ts` column.
+
+    If `ts` is not present, return the dataframe unchanged.
+    """
+    params = params or {}
+
+    if df.empty:
+        return df
+
+    if "ts" not in df.columns:
+        return df
+
     df = df.copy()
     df["ts"] = pd.to_datetime(df["ts"])
 
-    start_ts = plot_params.get("start_ts")
-    end_ts = plot_params.get("end_ts")
-    window_days = plot_params.get("window_days")
+    start_ts = params.get("start_ts")
+    end_ts = params.get("end_ts")
+    window_days = params.get("window_days")
 
-    if start_ts:
-        df = df[df["ts"] >= pd.to_datetime(start_ts)]
-    if end_ts:
-        df = df[df["ts"] <= pd.to_datetime(end_ts)]
+    if start_ts is not None:
+        start_ts = pd.to_datetime(start_ts)
+        df = df[df["ts"] >= start_ts]
 
-    if window_days and not start_ts:
-        end_time = df["ts"].max()
-        start_time = end_time - timedelta(days=int(window_days))
-        df = df[df["ts"] >= start_time]
+    if end_ts is not None:
+        end_ts = pd.to_datetime(end_ts)
+        df = df[df["ts"] <= end_ts]
+
+    # Only apply window_days when explicit bounds are not provided
+    if start_ts is None and end_ts is None and window_days is not None:
+        max_ts = df["ts"].max()
+        if pd.notna(max_ts):
+            cutoff = max_ts - pd.Timedelta(days=int(window_days))
+            df = df[df["ts"] >= cutoff]
 
     return df
 
