@@ -51,7 +51,7 @@ def _assert_any_glob(dir_path: Path, pattern: str, msg: str):
 def main():
     project_root = Path(__file__).resolve().parents[1]
 
-    plan_path = project_root / "planner" / "demo_gallery.json"
+    plan_path = project_root / "tests" / "fixtures" / "smoke_plan.json"
     _assert_exists(plan_path, "Missing plan library file")
 
     plan_lib = json.loads(plan_path.read_text())

@@ -1,0 +1,51 @@
+{
+  "_comment": "Stable test case for smoke test.",
+  "runs": [
+    {
+      "run_id": "demo_cpr11_health_check",
+      "request_text": "CPR11 needed maintenance last week due to motor temperature and again due to vibration. How is the tool doing now?",
+      "jobs": [
+        {
+          "job_id": "CPR11_temperature_motor",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR11",
+            "sensor": "temperature_motor",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr11_temperature_motor_spc.png"
+              }
+            ]
+          }
+        },
+        {
+          "job_id": "CPR11_vibration_rms",
+          "sql_template": "entity_sensor_history",
+          "preprocess": "ewma_spc",
+          "filters": {
+            "entity_group": "CPR",
+            "entity": "CPR11",
+            "sensor": "vibration_rms",
+            "start_ts": null,
+            "end_ts": null
+          },
+          "outputs": {
+            "plots": [
+              {
+                "plot": "spc_time_series",
+                "plot_name": "cpr11_vibration_rms_spc.png"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
