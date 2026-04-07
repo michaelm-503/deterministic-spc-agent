@@ -85,7 +85,10 @@ Supported queries
       - null → all entities in the entity_group
       - string → a single entity (e.g., "CPR11")
       - list[string] → multiple entities (e.g., ["CPR11", "CPR15"])
-    - start_ts/end_ts: default to last 2 days unless specified
+    - start_ts/end_ts:
+      - optional
+      - if the user says "now", "today", or asks how the tool is doing without specifying a time range, do NOT use a same-day slice. 
+      - best practice for performance is to include the last 3 days
     - not used: sensor
 - Preprocess modules: multi_sensor_health_summary
 - Table modules: multi_sensor_health_table
