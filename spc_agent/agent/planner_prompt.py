@@ -78,6 +78,9 @@ Supported queries
 - Use this workflow only for summary or diagnostic table requests.
 - Never use this workflow for explicit plotting requests.
 - If the user asks to plot, chart, graph, or visualize data, use the plotting workflow instead.
+- If the user asks a health question without identifying an entity or entity_group, do not generate an execution plan with null entity_group. Instead:
+  - prefer the recovery sentinel if prior context may resolve the missing entity
+  - otherwise return unsupported_request with reason "entity_group_undetermined"
 - SQL modules: entity_all_sensor_history
   - Filters:
     - entity_group: one and only one entity group required per job
@@ -257,7 +260,7 @@ Each supported execution job must include at least one visible output:
 - or tables
 
 Filters:
-- entity_group : string. One and only one entity group required per job. Can be inferred from entity[:3].
+- entity_group : string. Key column. One and only one entity group required for every job. Can be inferred from entity[:3].
 - entity : workflow dependent. See: Supported Queries
 - sensor : workflow dependent. See: Supported Queries
 - start_ts : ISO datetime or null. Optional SQL-level lower bound
@@ -281,6 +284,8 @@ Planning rules:
 - if outputs require materially different time windows, prefer separate jobs
 - prefer fleet-level plots unless a single entity is identified
 - If a request could match both a plotting workflow and a table-only summary workflow, explicit plotting language takes priority.
+- Never output an execution job with entity_group = null. If entity_group cannot be inferred from the prompt or prior context, do not guess.
+
 
 Do not:
 - invent SQL templates
@@ -430,7 +435,7 @@ Replot behavior constraints:
 - The output object must reuse the original dataset or a subset of it
 
 -----
-Hybrid / recovery requests
+Hybrid / recovery requests / conversational prompts
 -----
 Some user prompts may initially appear to be replot requests or may omit required fields, but can only be resolved correctly after inspecting the previous run.
 
@@ -442,10 +447,11 @@ In these cases, return exactly:
 
 This output is a recovery sentinel. It tells the backend to load the previous run JSON and re-call the planner with additional context.
 
-CRITICAL PRIORITY RULE:
-If a prompt appears to be a conversational continuation of a previous analysis and required fields cannot be fully determined from the current prompt alone, prefer the recovery sentinel over unsupported_request.
+CRITICAL PRIORITY RULES:
+- If a prompt appears to be a conversational continuation of a previous analysis and required fields cannot be fully determined from the current prompt alone, prefer the recovery sentinel over unsupported_request.
+- If a prompt does not contain an entity or entity_group, then it is a conversational prompt. Use the recovery sentinel to determine missing information
 
-Conversational continuation markers include prompts beginning with or strongly implying:
+Conversational continuation markers include prompts with words or phrases:
 - now
 - instead
 - change
@@ -456,6 +462,8 @@ Conversational continuation markers include prompts beginning with or strongly i
 - add
 - remove
 - zoom
+- how is ((this|that|the) tool|it) doing
+
 
 Examples of prompts that should prefer recovery:
 - "Now show me vibration data."
@@ -464,6 +472,8 @@ Examples of prompts that should prefer recovery:
 - "Change it to ARM."
 - "Show me CNC02 temp data."
 - "Remake it with vibration data."
+- "How is the tool doing?"
+- "Plot vibration"
 
 After context is added, the second planner call may return:
 - a valid execution plan

@@ -18,7 +18,7 @@ def preprocess_multi_sensor_health_summary(
 
     Optional params
     ---------------
-    window_days : int, default 3
+    window_days : int, default 2
         Window used for recent OOC rate and EWMA slope classification.
     ewma_alpha : float, default 0.2
         EWMA smoothing constant used for trend and z-score calculation.
@@ -28,7 +28,7 @@ def preprocess_multi_sensor_health_summary(
         Min absolute EWMA z-score slope/day for drifting classification.
     volatile_ooc_rate : float, default 0.05
         Minimum recent OOC rate to classify as volatile when not drifting or OOC.
-    slope_window_hours : int, default 48
+    slope_window_hours : int, default 24
         Defines start of window for slope calculation (relative to latest data point).
     """
     params = params or {}
@@ -57,19 +57,19 @@ def preprocess_multi_sensor_health_summary(
                 "centerline",
                 "std",
                 "latest_z_score",
-                "ooc_rate_3d",
-                "ewma_slope_z_per_day_48h",
+                "ooc_rate_2d",
+                "ewma_slope_z_per_day_24h",
                 "baseline_trend",
                 "health_status",
             ]
         )
 
-    window_days = int(params.get("window_days", 3))
+    window_days = int(params.get("window_days", 2))
     ewma_alpha = float(params.get("ewma_alpha", 0.2))
     stable_slope_z_per_day = float(params.get("stable_slope_z_per_day", 0.8))
     drifting_slope_z_per_day = float(params.get("drifting_slope_z_per_day", 1.0))
     volatile_ooc_rate = float(params.get("volatile_ooc_rate", 0.05))
-    slope_window_hours = int(params.get("slope_window_hours", 48))
+    slope_window_hours = int(params.get("slope_window_hours", 24))
 
     work = df.copy()
     work["ts"] = pd.to_datetime(work["ts"])
