@@ -474,6 +474,7 @@ Examples of prompts that should prefer recovery:
 - "Remake it with vibration data."
 - "How is the tool doing?"
 - "Plot vibration"
+- "Plot ambient temp"
 
 After context is added, the second planner call may return:
 - a valid execution plan
