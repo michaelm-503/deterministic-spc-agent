@@ -4,6 +4,12 @@ from typing import Any
 
 from runner.registry import SQL_REGISTRY, PREPROCESS_REGISTRY, PLOT_REGISTRY, TABLE_REGISTRY
 
+REQUIRED_FILTERS_BY_SQL = {
+    "entity_all_sensor_history": ["entity_group"],
+    "pm_event_sensor_history": ["entity_group"],
+    "entity_sensor_history": ["entity_group", "entity", "sensor"],
+    "fleet_sensor_history": ["entity_group", "sensor"],
+}
 
 class PlanValidationError(ValueError):
     """Raised when a plan fails lightweight schema/registry validation."""
@@ -50,6 +56,18 @@ def validate_job(job: dict, path: str = "job") -> None:
         raise PlanValidationError(f"{path}.preprocess='{preprocess_key}' not in PREPROCESS_REGISTRY.")
 
     _require_type(job["filters"], dict, f"{path}.filters")
+
+    filters = job["filters"]
+    required_filters = REQUIRED_FILTERS_BY_SQL.get(sql_key, [])
+    missing_required = [
+        key for key in required_filters
+        if filters.get(key) in (None, "")
+    ]
+    if missing_required:
+        raise PlanValidationError(
+            f"{path} sql_template='{sql_key}' is missing required non-null filters: "
+            f"{missing_required}. Provided filters: {filters}"
+        )
 
     outputs = job.get("outputs", {}) or {}
     _require_type(outputs, dict, f"{path}.outputs")

@@ -401,9 +401,6 @@ def _render_result(result: Any) -> None:
 # -----------------------------
 # Guided demo helpers
 # -----------------------------
-# -----------------------------
-# Guided demo helpers
-# -----------------------------
 def _start_guided_demo(demo_prompts: list[str]) -> None:
     step = st.session_state.get("guided_demo_step", 0)
 
@@ -421,7 +418,7 @@ def _start_guided_demo(demo_prompts: list[str]) -> None:
     if not history:
         return
 
-    st.session_state["force_json_upload"] = True
+    st.session_state["force_json_upload"] = False     #force_json_upload=True to improve success rate for demo of conversational prompts.
     st.session_state["context_history_index"] = 0
 
     if step == 3:
