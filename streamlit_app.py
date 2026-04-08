@@ -26,7 +26,7 @@ st.set_page_config(
 # Verbose Debugging
 # -----------------------------
 
-verbose = False
+verbose = True
 
 # -----------------------------
 # Setup helpers
